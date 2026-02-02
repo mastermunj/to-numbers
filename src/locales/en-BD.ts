@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -21,6 +22,11 @@ export default class Locale implements LocaleInterface {
       point: 'Point',
     },
     numberWordsMapping: [
+      { number: 100000000000000000n, value: 'Shankh' },
+      { number: 1000000000000000n, value: 'Padma' },
+      { number: 10000000000000n, value: 'Neel' },
+      { number: 100000000000n, value: 'Kharab' },
+      { number: 1000000000n, value: 'Arab' },
       { number: 10000000, value: 'Crore' },
       { number: 100000, value: 'Lakh' },
       { number: 1000, value: 'Thousand' },
@@ -56,4 +62,15 @@ export default class Locale implements LocaleInterface {
     ],
     exactWordsMapping: [{ number: 100, value: 'One Hundred' }],
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need en-BD locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

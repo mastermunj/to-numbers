@@ -156,6 +156,17 @@ describe('Tokenizer Tests', () => {
       expect(tokenize('vingt-et-un', { wordMap })).toEqual(['vingt-et-un']);
     });
 
+    test('should preserve hyphenated word in wordMap when it appears after other text', () => {
+      // This tests line 126 in tokenizer.ts - hyphenated word in wordMap
+      // The hyphenated word must not match as a phrase (comes after other words)
+      const wordMap = new Map<string, number>([
+        ['cent', 100],
+        ['vingt-et-un', 21],
+      ]);
+      // "cent vingt-et-un" - cent matches first, then vingt-et-un should be kept as hyphenated
+      expect(tokenize('cent vingt-et-un', { wordMap })).toEqual(['cent', 'vingt-et-un']);
+    });
+
     test('should split unknown hyphenated words with wordMap', () => {
       const wordMap = new Map<string, number>([
         ['twenty', 20],
@@ -351,5 +362,80 @@ describe('localeAdapter Coverage', () => {
   test('should handle locale with plural forms', () => {
     // ar-SA has pluralForms with dual, paucal, plural
     expect(arSA.convert('مليون')).toBe(1000000); // plural form
+  });
+
+  test('should handle Arabic dual forms', () => {
+    // Test dual form (ألفان = 2000)
+    expect(arSA.convert('ألفان')).toBe(2000);
+  });
+
+  test('should handle Arabic paucal forms', () => {
+    // Test paucal form
+    expect(arSA.convert('ثلاثة آلاف')).toBe(3000);
+  });
+});
+
+describe('ToNumbersCore Additional Coverage', () => {
+  const toNumbers = new ToNumbers({ localeCode: 'en-IN' });
+
+  test('setLocale should allow changing locale', () => {
+    const tn = new ToNumbers({ localeCode: 'en-IN' });
+    const enUSLocale = new ToNumbers({ localeCode: 'en-US' }).getLocaleClass();
+    tn.setLocale(enUSLocale);
+    expect(tn.getLocaleClass()).toBe(enUSLocale);
+  });
+
+  test('should handle ignoreZeroCurrency option', () => {
+    const result = toNumbers.parse('Zero Rupees', { currency: true, ignoreZeroCurrency: true });
+    expect(result.value).toBe(0);
+    expect(result.currencyInfo?.mainAmount).toBe(0);
+  });
+
+  test('should handle ignoreDecimal option for currency', () => {
+    const result = toNumbers.parse('Fifty Two Rupees And Thirty Paise Only', {
+      currency: true,
+      ignoreDecimal: true,
+    });
+    expect(result.value).toBe(52);
+    expect(result.currencyInfo?.fractionalAmount).toBe(0);
+  });
+
+  test('should handle custom currencyOptions', () => {
+    const result = toNumbers.parse('One Hundred Dollars And Fifty Cents', {
+      currency: true,
+      currencyOptions: {
+        name: 'Dollar',
+        plural: 'Dollars',
+        singular: 'Dollar',
+        fractionalUnit: {
+          name: 'Cent',
+          plural: 'Cents',
+          singular: 'Cent',
+        },
+      },
+    });
+    expect(result.value).toBe(100.5);
+    expect(result.currencyInfo?.mainAmount).toBe(100);
+    expect(result.currencyInfo?.fractionalAmount).toBe(50);
+  });
+
+  test('should handle empty tokens in currency parsing', () => {
+    // This tests the empty tokens path in parseCurrency
+    const result = toNumbers.parse('Rupees Only', { currency: true });
+    expect(result.value).toBe(0);
+  });
+
+  test('should handle tokens that are all "and" words', () => {
+    // Test edge case where all tokens are filtered out as "and" words
+    const result = toNumbers.parse('And And And Rupees', { currency: true });
+    expect(result.value).toBe(0);
+  });
+});
+
+describe('ToNumbersCore Error Cases', () => {
+  test('ToNumbersCore without locale should throw', async () => {
+    const { ToNumbersCore } = await import('../src/ToNumbersCore');
+    const tnCore = new ToNumbersCore();
+    expect(() => tnCore.getLocaleClass()).toThrow(/No locale set/);
   });
 });

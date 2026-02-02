@@ -23,19 +23,65 @@
   },
   "license": "MIT",
   "author": "Munjal Dhamecha",
-  "main": "dist/ToNumbers.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/types/ToNumbers.d.ts",
+      "import": "./dist/esm/ToNumbers.js",
+      "require": "./dist/cjs/ToNumbers.js"
+    },
+    "./*": {
+      "types": "./dist/types/locales/*.d.ts",
+      "import": "./dist/esm/locales/*.js",
+      "require": "./dist/cjs/locales/*.js"
+    },
+    "./types": {
+      "types": "./dist/types/types.d.ts",
+      "import": "./dist/esm/types.js",
+      "require": "./dist/cjs/types.js"
+    },
+    "./core": {
+      "types": "./dist/types/ToNumbersCore.d.ts",
+      "import": "./dist/esm/ToNumbersCore.js",
+      "require": "./dist/cjs/ToNumbersCore.js"
+    }
+  },
+  "main": "dist/cjs/ToNumbers.js",
+  "jsdelivr": "dist/umd/to-numbers.min.js",
+  "unpkg": "dist/umd/to-numbers.min.js",
+  "module": "dist/esm/ToNumbers.js",
+  "browser": "dist/umd/to-numbers.min.js",
+  "types": "dist/types/ToNumbers.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/types/locales/*"
+      ],
+      "types": [
+        "dist/types/types"
+      ],
+      "core": [
+        "dist/types/ToNumbersCore"
+      ]
+    }
+  },
   "files": [
-    "dist/*"
+    "dist/**/*"
   ],
   "scripts": {
-    "build": "npm run clean && tsc --noEmitOnError",
+    "build": "npm run clean && npm run build:types && npm run build:cjs && npm run build:esm && npm run build:umd && npm run build:pkgjson",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "build:pkgjson": "echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
+    "build:types": "tsc -p tsconfig.json",
+    "build:umd": "node --experimental-strip-types scripts/build-umd.ts",
     "build:watch": "npm run build -- --watch",
     "clean": "rimraf dist coverage",
     "commit": "git-cz",
     "lint": "eslint --max-warnings=0 .",
     "lint:fix": "npm run lint -- --fix",
     "prepare": "husky",
-    "release": "standard-version",
+    "release": "commit-and-tag-version",
     "release:mock": "npm run release -- --dry-run",
     "test": "vitest",
     "test:watch": "npm run test -- --watch"
@@ -51,10 +97,12 @@
     "@types/lodash": "^4.17.23",
     "@types/node": "^25.2.0",
     "@types/source-map-support": "^0.5.10",
-    "@typescript-eslint/eslint-plugin": "^8.54.0",
-    "@typescript-eslint/parser": "^8.54.0",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/parser": "^8.52.0",
+    "@vitest/coverage-v8": "^4.0.16",
+    "commit-and-tag-version": "^12.6.1",
     "cz-conventional-changelog": "^3.3.0",
+    "esbuild": "^0.27.2",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
@@ -66,11 +114,11 @@
     "rimraf": "^6.1.2",
     "sort-package-json": "^3.6.1",
     "source-map-support": "^0.5.21",
-    "standard-version": "^9.5.0",
+    "to-words": "^5.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
   },
   "engines": {
-    "node": ">=12.0.0"
+    "node": ">=20.0.0"
   }
 }

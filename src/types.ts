@@ -44,6 +44,12 @@ export type ConverterOptions = {
   ignoreDecimal?: boolean;
   // For currency parsing, specifies fractional precision (default: 2)
   fractionalPrecision?: number;
+  // Ignore zero currency (e.g., "Zero Dollars" -> skip)
+  ignoreZeroCurrency?: boolean;
+  // Do not add "Only" suffix when parsing currency
+  doNotAddOnly?: boolean;
+  // Override currency options for parsing
+  currencyOptions?: Partial<CurrencyOptions>;
 };
 
 /**
@@ -63,9 +69,10 @@ export interface ConstructorOf<T> {
 
 /**
  * Number word mapping (same as to-words)
+ * Supports bigint for extremely large numbers
  */
 export type NumberWordMap = {
-  number: number;
+  number: number | bigint;
   value: string | [string, string];
   singularValue?: string;
 };
@@ -83,6 +90,25 @@ export interface ParserLocaleConfig {
    * Scale words (hundred, thousand, million, etc.)
    */
   scaleWords: Set<number>;
+
+  /**
+   * Words that imply a coefficient of 2 when appearing alone as a scale word
+   * (e.g., Italian "Milioni" = 2 million, but "Dieci Milioni" = 10 million)
+   */
+  impliedDualWords: Set<string>;
+
+  /**
+   * Words that represent the number 1 (used to detect postfix qualifiers like
+   * Swahili "Mia Moja" = hundred one = 100, where "Moja" shouldn't add 1)
+   */
+  oneWords: Set<string>;
+
+  /**
+   * Whether the locale uses postfix "one" qualifiers for scale words.
+   * In Swahili, "Mia Moja" (hundred one) = 100, not 101.
+   * This is detected by the presence of "<scale> <one>" patterns in exactWordsMapping.
+   */
+  usesPostfixOne: boolean;
 
   /**
    * Text markers for parsing
@@ -140,6 +166,9 @@ export interface OriginalLocaleConfig {
   };
   numberWordsMapping: NumberWordMap[];
   exactWordsMapping?: NumberWordMap[];
+  ordinalWordsMapping?: NumberWordMap[];
+  ordinalExactWordsMapping?: NumberWordMap[];
+  ordinalSuffix?: string;
   namedLessThan1000?: boolean;
   splitWord?: string;
   ignoreZeroInDecimals?: boolean;

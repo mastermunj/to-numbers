@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -8,9 +9,9 @@ export default class Locale implements LocaleInterface {
       singular: 'টাকা',
       symbol: '৳',
       fractionalUnit: {
-        name: 'পয়সা',
-        singular: 'পয়সা',
-        plural: 'পয়সা',
+        name: 'পয়সা',
+        singular: 'পয়সা',
+        plural: 'পয়সা',
         symbol: '',
       },
     },
@@ -21,6 +22,11 @@ export default class Locale implements LocaleInterface {
       point: 'দশমিক',
     },
     numberWordsMapping: [
+      { number: 100000000000000000n, value: 'শঙ্খ' },
+      { number: 1000000000000000n, value: 'পদ্ম' },
+      { number: 10000000000000n, value: 'নীল' },
+      { number: 100000000000n, value: 'খরব' },
+      { number: 1000000000n, value: 'আরব' },
       { number: 10000000, value: 'কোটি' },
       { number: 100000, value: 'লাখ' },
       { number: 1000, value: 'হাজার' },
@@ -28,7 +34,7 @@ export default class Locale implements LocaleInterface {
       { number: 99, value: 'নিরানব্বই' },
       { number: 98, value: 'আটানব্বই' },
       { number: 97, value: 'সাতানব্বই' },
-      { number: 96, value: 'ছিয়ানব্বই' },
+      { number: 96, value: 'ছিয়ানব্বই' },
       { number: 95, value: 'পঁচানব্বই' },
       { number: 94, value: 'চুরানব্বই' },
       { number: 93, value: 'তিরানব্বই' },
@@ -36,8 +42,8 @@ export default class Locale implements LocaleInterface {
       { number: 91, value: 'একানব্বই' },
       { number: 90, value: 'নব্বই' },
       { number: 89, value: 'ঊননব্বই' },
-      { number: 88, value: 'অষ্টআশি' },
-      { number: 87, value: 'সাতআশি' },
+      { number: 88, value: 'আটাশি' },
+      { number: 87, value: 'সাতাশি' },
       { number: 86, value: 'ছিয়াশী' },
       { number: 85, value: 'পঁচাশী' },
       { number: 84, value: 'চুরাশী' },
@@ -127,4 +133,11 @@ export default class Locale implements LocaleInterface {
       { number: 0, value: 'শূন্য' },
     ],
   };
+}
+
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

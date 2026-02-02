@@ -1,10 +1,12 @@
 {
   "compilerOptions": {
-    "target": "ES2019",
-    "module": "commonjs",
-    "outDir": "./dist",
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist/types",
     "rootDir": "./src",
     "declaration": true,
+    "emitDeclarationOnly": true,
 
     "strict": true,
     "noImplicitAny": true,
@@ -25,11 +27,11 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
+  "include": ["src/**/*"],
   "exclude": [
     "node_modules",
-    "__tests__"
-  ],
-  "include": [
-    "./src/**/*"
+    "__tests__",
+    "coverage",
+    "dist"
   ]
 }
