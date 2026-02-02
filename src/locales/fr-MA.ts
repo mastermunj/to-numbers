@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -25,8 +26,10 @@ export default class Locale implements LocaleInterface {
       { number: 1000000000000, value: 'Billion' },
       { number: 1000000000, value: 'Milliard' },
       { number: 1000000, value: 'Million' },
+      { number: 1000000, value: 'Millions' },
       { number: 1000, value: 'Mille' },
       { number: 100, value: 'Cent' },
+      { number: 100, value: 'Cents' },
       { number: 99, value: 'Quatre-Vingt-Dix-Neuf' },
       { number: 98, value: 'Quatre-Vingt-Dix-Huit' },
       { number: 97, value: 'Quatre-Vingt-Dix-Sept' },
@@ -47,6 +50,7 @@ export default class Locale implements LocaleInterface {
       { number: 82, value: 'Quatre-Vingt-Deux' },
       { number: 81, value: 'Quatre-Vingt-Un' },
       { number: 80, value: 'Quatre-Vingt' },
+      { number: 80, value: 'Quatre-Vingts' },
       { number: 79, value: 'Soixante-Dix-Neuf' },
       { number: 78, value: 'Soixante-Dix-Huit' },
       { number: 77, value: 'Soixante-Dix-Sept' },
@@ -132,4 +136,15 @@ export default class Locale implements LocaleInterface {
     pluralMark: 's',
     pluralWords: ['Billiard', 'Billion', 'Milliard', 'Million'],
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need fr-MA locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

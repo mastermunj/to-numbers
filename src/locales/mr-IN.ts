@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -21,6 +22,11 @@ export default class Locale implements LocaleInterface {
       point: 'पूर्णांक',
     },
     numberWordsMapping: [
+      { number: 100000000000000000n, value: 'शंख' },
+      { number: 1000000000000000n, value: 'पद्म' },
+      { number: 10000000000000n, value: 'नील' },
+      { number: 100000000000n, value: 'खर्व' },
+      { number: 1000000000n, value: 'अब्ज' },
       { number: 10000000, value: 'कोटी' },
       { number: 100000, value: 'लाख' },
       { number: 1000, value: 'हजार' },
@@ -136,4 +142,15 @@ export default class Locale implements LocaleInterface {
     ],
     namedLessThan1000: true,
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need mr-IN locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }
