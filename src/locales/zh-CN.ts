@@ -74,6 +74,27 @@ export default class Locale implements LocaleInterface {
       '千兆',
     ],
     trim: true,
+    ordinalWordsMapping: [
+      { number: 100, value: '第一百' },
+      { number: 90, value: '第九十' },
+      { number: 80, value: '第八十' },
+      { number: 70, value: '第七十' },
+      { number: 60, value: '第六十' },
+      { number: 50, value: '第五十' },
+      { number: 40, value: '第四十' },
+      { number: 30, value: '第三十' },
+      { number: 20, value: '第二十' },
+      { number: 10, value: '第十' },
+      { number: 9, value: '第九' },
+      { number: 8, value: '第八' },
+      { number: 7, value: '第七' },
+      { number: 6, value: '第六' },
+      { number: 5, value: '第五' },
+      { number: 4, value: '第四' },
+      { number: 3, value: '第三' },
+      { number: 2, value: '第二' },
+      { number: 1, value: '第一' },
+    ],
   };
 }
 

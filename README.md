@@ -45,6 +45,7 @@ Convert words to numbers with comprehensive locale, currency, and decimal suppor
 - **Reverse of to-words** — Perfectly complements the to-words package
 - **Multiple Numbering Systems** — Short scale, Long scale, Indian, and East Asian
 - **Currency Parsing** — Parse locale-specific currency with fractional units
+- **Ordinal Numbers** — Parse ordinals like "First", "Twenty Third", "Hundredth"
 - **Decimal Numbers** — Handle "Point" notation and fractional units
 - **Case Insensitive** — Works with any case combination
 - **Tree-Shakeable** — Import only the locales you need
@@ -124,6 +125,26 @@ toNumbers.convert('ONE HUNDRED TWENTY THREE');
 
 toNumbers.convert('One Hundred Twenty Three');
 // 123
+```
+
+### Ordinal Numbers
+
+Parse ordinal words automatically — no special options needed:
+
+```js
+const toNumbers = new ToNumbers({ localeCode: 'en-US' });
+
+toNumbers.convert('First');
+// 1
+
+toNumbers.convert('Twenty Third');
+// 23
+
+toNumbers.convert('One Hundredth');
+// 100
+
+toNumbers.convert('One Thousand Two Hundred Thirty Fourth');
+// 1234
 ```
 
 ### Currency Parsing
@@ -366,9 +387,8 @@ toNumbers.convert('일억');
 interface ToNumbersOptions {
   localeCode?: string;           // Default: 'en-IN'
   converterOptions?: {
-    currency?: boolean;          // Default: false
-    ignoreDecimal?: boolean;     // Default: false
-    currencyOptions?: {
+    currency?: boolean;          // Default: false (auto-detect when undefined)
+    currencyOptions?: {          // Override locale's currency settings
       name: string;
       plural: string;
       symbol: string;
@@ -407,7 +427,6 @@ toNumbers.convert('Fifty Dollars Only', { currency: true });
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `currency` | boolean | false | Parse as currency with locale-specific formatting |
-| `ignoreDecimal` | boolean | false | Ignore fractional part when parsing |
 | `currencyOptions` | object | undefined | Override locale's default currency settings |
 
 ## 📏 Bundle Sizes
@@ -675,7 +694,15 @@ See the [Contributing](#-contributing) section above. You'll need to create a lo
 <details>
 <summary><strong>What about ordinal numbers (First, Second, Third)?</strong></summary>
 
-Ordinal parsing is planned for a future release. Currently, the library focuses on cardinal number parsing.
+Ordinal parsing is fully supported! The library automatically detects ordinal words:
+
+```js
+toNumbers.convert('First');        // 1
+toNumbers.convert('Twenty Third'); // 23
+toNumbers.convert('Hundredth');    // 100
+```
+
+Ordinal support is available for English locales. Other locales are being added progressively.
 
 </details>
 

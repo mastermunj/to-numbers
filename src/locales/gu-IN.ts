@@ -133,6 +133,19 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'એક' },
       { number: 0, value: 'શૂન્ય' },
     ],
+    ordinalWordsMapping: [
+      { number: 100, value: 'સોમું' },
+      { number: 10, value: 'દસમું' },
+      { number: 9, value: 'નવમું' },
+      { number: 8, value: 'આઠમું' },
+      { number: 7, value: 'સાતમું' },
+      { number: 6, value: 'છઠ્ઠું' },
+      { number: 5, value: 'પાંચમું' },
+      { number: 4, value: 'ચોથું' },
+      { number: 3, value: 'ત્રીજું' },
+      { number: 2, value: 'બીજું' },
+      { number: 1, value: 'પહેલું' },
+    ],
   };
 }
 

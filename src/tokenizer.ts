@@ -17,12 +17,12 @@ export interface TokenizerOptions {
    * Word map to check if hyphenated words should be kept together
    */
   wordMap?: Map<string, number>;
-}
 
-const DEFAULT_OPTIONS: TokenizerOptions = {
-  caseSensitive: false,
-  trim: false,
-};
+  /**
+   * Pre-sorted phrases for performance (optional - if not provided, will sort on demand)
+   */
+  sortedPhrases?: string[];
+}
 
 /**
  * Normalize a word for consistent matching
@@ -41,7 +41,8 @@ export function normalizeWord(word: string, caseSensitive: boolean = false): str
  * Also handles multi-word phrases from the word map
  */
 export function tokenize(input: string, options: Partial<TokenizerOptions> = {}): string[] {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
+  // Avoid object spread - use options directly with defaults
+  const caseSensitive = options.caseSensitive ?? false;
 
   if (!input || typeof input !== 'string') {
     return [];
@@ -49,13 +50,13 @@ export function tokenize(input: string, options: Partial<TokenizerOptions> = {})
 
   let text = input.trim();
 
-  if (!opts.caseSensitive) {
+  if (!caseSensitive) {
     text = text.toLowerCase();
   }
 
   // If we have a word map, try to match multi-word phrases first
-  if (opts.wordMap) {
-    return tokenizeWithPhrases(text, opts.wordMap, opts.caseSensitive);
+  if (options.wordMap) {
+    return tokenizeWithPhrases(text, options.wordMap, options.sortedPhrases);
   }
 
   // Fallback: simple tokenization by splitting on whitespace and hyphens
@@ -76,82 +77,149 @@ export function tokenize(input: string, options: Partial<TokenizerOptions> = {})
 
 /**
  * Tokenize with support for multi-word phrases from word map
+ * Optimized: avoids creating substrings, uses direct character checks
  */
-function tokenizeWithPhrases(text: string, wordMap: Map<string, number>, caseSensitive: boolean = false): string[] {
-  // Get all phrases from the map, sorted by word count (most words first), then by length
-  const phrases = Array.from(wordMap.keys()).sort((a, b) => {
-    const wordsA = a.split(/\s+/).length;
-    const wordsB = b.split(/\s+/).length;
-    if (wordsB !== wordsA) return wordsB - wordsA;
-    return b.length - a.length;
-  });
-
+function tokenizeWithPhrases(text: string, wordMap: Map<string, number>, sortedPhrases?: string[]): string[] {
   const tokens: string[] = [];
-  let remaining = text;
+  let pos = 0;
+  const len = text.length;
+  const hasMultiWordPhrases = sortedPhrases && sortedPhrases.length > 0;
 
-  while (remaining.trim().length > 0) {
-    remaining = remaining.trim();
+  while (pos < len) {
+    // Skip leading whitespace using char code checks (faster than regex)
+    let c = text.charCodeAt(pos);
+    while (pos < len && (c === 32 || c === 9 || c === 10 || c === 13)) {
+      pos++;
+      if (pos < len) c = text.charCodeAt(pos);
+    }
+    if (pos >= len) break;
+
     let matched = false;
 
-    // Try to match longest phrase first
-    for (const phrase of phrases) {
-      const normalizedPhrase = caseSensitive ? phrase : phrase.toLowerCase();
-      if (remaining.startsWith(normalizedPhrase)) {
-        // Check that the match ends at a word boundary
-        const nextCharIndex = normalizedPhrase.length;
-        if (nextCharIndex >= remaining.length || /\s/.test(remaining[nextCharIndex])) {
-          tokens.push(normalizedPhrase);
-          remaining = remaining.slice(normalizedPhrase.length);
-          matched = true;
-          break;
+    // Try multi-word phrase matching first if we have multi-word phrases
+    if (hasMultiWordPhrases) {
+      for (const phrase of sortedPhrases!) {
+        const phraseLen = phrase.length;
+        // Quick check: can the phrase fit?
+        if (pos + phraseLen > len) continue;
+
+        // Check if text at position matches the phrase
+        let matches = true;
+        for (let i = 0; i < phraseLen; i++) {
+          if (text.charCodeAt(pos + i) !== phrase.charCodeAt(i)) {
+            matches = false;
+            break;
+          }
+        }
+
+        if (matches) {
+          // Check that the match ends at a word boundary
+          const nextPos = pos + phraseLen;
+          if (nextPos >= len) {
+            tokens.push(phrase);
+            pos = nextPos;
+            matched = true;
+            break;
+          }
+          const nextChar = text.charCodeAt(nextPos);
+          if (nextChar === 32 || nextChar === 9 || nextChar === 10 || nextChar === 13) {
+            tokens.push(phrase);
+            pos = nextPos;
+            matched = true;
+            break;
+          }
         }
       }
     }
 
-    if (!matched) {
-      // No phrase match, take the first word
-      const spaceIndex = remaining.indexOf(' ');
-      let word: string;
-      if (spaceIndex === -1) {
-        word = remaining;
-        remaining = '';
-      } else {
-        word = remaining.slice(0, spaceIndex);
-        remaining = remaining.slice(spaceIndex + 1);
-      }
+    if (matched) continue;
 
-      // Handle hyphens in the word
-      if (word.includes('-')) {
-        if (wordMap.has(word)) {
-          tokens.push(word);
-        } else {
-          tokens.push(...word.split('-').filter((part) => part.length > 0));
-        }
-      } else if (word.length > 0) {
-        tokens.push(word);
-      }
+    // Find the end of the current word using char codes
+    let wordEnd = pos;
+    while (wordEnd < len) {
+      const cc = text.charCodeAt(wordEnd);
+      if (cc === 32 || cc === 9 || cc === 10 || cc === 13) break;
+      wordEnd++;
     }
+
+    const word = text.slice(pos, wordEnd);
+
+    // Check if this single word is in the map
+    if (wordMap.has(word)) {
+      tokens.push(word);
+      pos = wordEnd;
+      continue;
+    }
+
+    // Handle hyphens in the word
+    if (word.includes('-')) {
+      const parts = word.split('-');
+      for (const part of parts) {
+        if (part.length > 0) {
+          tokens.push(part);
+        }
+      }
+      pos = wordEnd;
+      continue;
+    }
+
+    // No match found, just add the word as-is
+    if (word.length > 0) {
+      tokens.push(word);
+    }
+    pos = wordEnd;
   }
 
   return tokens;
 }
 
+// Pre-compiled regexes for cleanInput (avoid creating new regex objects on every call)
+const MULTI_SPACE_REGEX = /\s+/g;
+const TRAILING_PUNCT_REGEX = /[.,](?=\s|$)/g;
+
 /**
  * Clean and normalize input string
+ * Optimized: avoids regex for common cases
  */
 export function cleanInput(input: string): string {
   if (!input || typeof input !== 'string') {
     return '';
   }
 
-  return (
-    input
-      .trim()
-      // Normalize multiple spaces to single space
-      .replace(/\s+/g, ' ')
-      // Remove common punctuation that might appear in currency
-      .replace(/[.,](?=\s|$)/g, '')
-  );
+  const trimmed = input.trim();
+
+  // Fast path: check if we need any cleaning at all
+  // Most inputs don't have multiple spaces or trailing punctuation
+  let needsCleaning = false;
+  let prevWasSpace = false;
+  for (let i = 0; i < trimmed.length; i++) {
+    const c = trimmed.charCodeAt(i);
+    // Check for multiple spaces
+    if (c === 32) {
+      if (prevWasSpace) {
+        needsCleaning = true;
+        break;
+      }
+      prevWasSpace = true;
+    } else {
+      prevWasSpace = false;
+      // Check for trailing punctuation (. or , followed by space or end)
+      if (c === 46 || c === 44) {
+        // period or comma
+        if (i === trimmed.length - 1 || trimmed.charCodeAt(i + 1) === 32) {
+          needsCleaning = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!needsCleaning) {
+    return trimmed;
+  }
+
+  // Slow path: use regex for cleaning
+  return trimmed.replace(MULTI_SPACE_REGEX, ' ').replace(TRAILING_PUNCT_REGEX, '');
 }
 
 /**
@@ -164,12 +232,14 @@ export function isNumberWord(token: string, wordMap: Map<string, number>): boole
 /**
  * Tokenize a concatenated string (no spaces) using longest-match algorithm
  * Used for languages like Korean where words are joined together
+ * @param sortedWords Pre-sorted words array (optional - if provided, skips sorting for performance)
  */
 export function tokenizeConcatenated(
   input: string,
   wordMap: Map<string, number>,
   caseSensitive: boolean = false,
   additionalWords: string[] = [],
+  sortedWords?: string[],
 ): string[] {
   if (!input || typeof input !== 'string') {
     return [];
@@ -180,10 +250,16 @@ export function tokenizeConcatenated(
     text = text.toLowerCase();
   }
 
-  // Combine word map keys with additional special words
-  const allWords = [...Array.from(wordMap.keys()), ...additionalWords];
-  // Sort by length (longest first) to ensure greedy matching
-  const words = allWords.sort((a, b) => b.length - a.length);
+  // Use pre-sorted words if provided, otherwise compute on demand
+  let words: string[];
+  if (sortedWords) {
+    words = sortedWords;
+  } else {
+    // Combine word map keys with additional special words
+    const allWords = [...Array.from(wordMap.keys()), ...additionalWords];
+    // Sort by length (longest first) to ensure greedy matching
+    words = allWords.sort((a, b) => b.length - a.length);
+  }
 
   const tokens: string[] = [];
   let remaining = text;

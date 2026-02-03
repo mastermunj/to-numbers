@@ -232,3 +232,38 @@ describe('Test Negative Currency - Lowercase', () => {
     expect(toNumbers.convert(input, { currency: true })).toBe(expected);
   });
 });
+
+// Ordinal number tests
+const testOrdinals: [string, number][] = [
+  ['Birinci', 1],
+  ['İkinci', 2],
+  ['Üçüncü', 3],
+  ['Dördüncü', 4],
+  ['Beşinci', 5],
+  ['Altıncı', 6],
+  ['Yedinci', 7],
+  ['Sekizinci', 8],
+  ['Dokuzuncu', 9],
+  ['Onuncu', 10],
+];
+
+describe('Test Ordinal Numbers', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Parse Result', () => {
+  test('parse returns isOrdinal true for ordinal input', () => {
+    const result = toNumbers.parse('Birinci');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBe(true);
+    expect(result.isCurrency).toBe(false);
+  });
+
+  test('parse returns isOrdinal undefined for cardinal input', () => {
+    const result = toNumbers.parse('bir');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBeUndefined();
+  });
+});

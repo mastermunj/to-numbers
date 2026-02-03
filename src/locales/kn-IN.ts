@@ -132,6 +132,19 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'ಒಂದು' },
       { number: 0, value: 'ಶೂನ್ಯ' },
     ],
+    ordinalWordsMapping: [
+      { number: 100, value: 'ನೂರನೆಯ' },
+      { number: 10, value: 'ಹತ್ತನೆಯ' },
+      { number: 9, value: 'ಒಂಬತ್ತನೆಯ' },
+      { number: 8, value: 'ಎಂಟನೆಯ' },
+      { number: 7, value: 'ಏಳನೆಯ' },
+      { number: 6, value: 'ಆರನೆಯ' },
+      { number: 5, value: 'ಐದನೆಯ' },
+      { number: 4, value: 'ನಾಲ್ಕನೆಯ' },
+      { number: 3, value: 'ಮೂರನೆಯ' },
+      { number: 2, value: 'ಎರಡನೆಯ' },
+      { number: 1, value: 'ಮೊದಲನೆಯ' },
+    ],
   };
 }
 

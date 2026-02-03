@@ -128,6 +128,19 @@ export default class Locale implements LocaleInterface {
       { number: 0, value: 'صفر' },
     ],
     exactWordsMapping: [{ number: 100, value: 'ایک سو' }],
+    ordinalWordsMapping: [
+      { number: 100, value: 'سواں' },
+      { number: 10, value: 'دسواں' },
+      { number: 9, value: 'نواں' },
+      { number: 8, value: 'آٹھواں' },
+      { number: 7, value: 'ساتواں' },
+      { number: 6, value: 'چھٹا' },
+      { number: 5, value: 'پانچواں' },
+      { number: 4, value: 'چوتھا' },
+      { number: 3, value: 'تیسرا' },
+      { number: 2, value: 'دوسرا' },
+      { number: 1, value: 'پہلا' },
+    ],
   };
 }
 

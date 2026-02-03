@@ -141,6 +141,19 @@ export default class Locale implements LocaleInterface {
       { number: 0, value: 'शून्य' },
     ],
     namedLessThan1000: true,
+    ordinalWordsMapping: [
+      { number: 100, value: 'शंभरावा' },
+      { number: 10, value: 'दहावा' },
+      { number: 9, value: 'नववा' },
+      { number: 8, value: 'आठवा' },
+      { number: 7, value: 'सातवा' },
+      { number: 6, value: 'सहावा' },
+      { number: 5, value: 'पाचवा' },
+      { number: 4, value: 'चौथा' },
+      { number: 3, value: 'तिसरा' },
+      { number: 2, value: 'दुसरा' },
+      { number: 1, value: 'पहिला' },
+    ],
   };
 }
 
