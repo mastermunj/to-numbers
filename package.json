@@ -1,6 +1,6 @@
 {
   "name": "to-numbers",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Converts words (including decimal points) into numbers & currency. The reverse of to-words.",
   "keywords": [
     "to numbers",
