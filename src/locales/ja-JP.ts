@@ -74,6 +74,28 @@ export default class Locale implements LocaleInterface {
       '千兆',
     ],
     trim: true,
+    ordinalSuffix: '番目',
+    ordinalWordsMapping: [
+      { number: 100, value: '百番目' },
+      { number: 90, value: '九十番目' },
+      { number: 80, value: '八十番目' },
+      { number: 70, value: '七十番目' },
+      { number: 60, value: '六十番目' },
+      { number: 50, value: '五十番目' },
+      { number: 40, value: '四十番目' },
+      { number: 30, value: '三十番目' },
+      { number: 20, value: '二十番目' },
+      { number: 10, value: '十番目' },
+      { number: 9, value: '九番目' },
+      { number: 8, value: '八番目' },
+      { number: 7, value: '七番目' },
+      { number: 6, value: '六番目' },
+      { number: 5, value: '五番目' },
+      { number: 4, value: '四番目' },
+      { number: 3, value: '三番目' },
+      { number: 2, value: '二番目' },
+      { number: 1, value: '一番目' },
+    ],
   };
 }
 

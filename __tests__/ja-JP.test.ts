@@ -340,3 +340,36 @@ describe('Test Negative Floats - Lowercase', () => {
     expect(toNumbers.convert(input)).toBe(expected);
   });
 });
+
+// Ordinal number tests
+const testOrdinals: [string, number][] = [
+  ['一番目', 1],
+  ['二番目', 2],
+  ['三番目', 3],
+  ['五番目', 5],
+  ['十番目', 10],
+  ['二十番目', 20],
+  ['五十番目', 50],
+  ['百番目', 100],
+];
+
+describe('Test Ordinal Numbers', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Parse Result', () => {
+  test('parse returns isOrdinal true for ordinal input', () => {
+    const result = toNumbers.parse('一番目');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBe(true);
+    expect(result.isCurrency).toBe(false);
+  });
+
+  test('parse returns isOrdinal undefined for cardinal input', () => {
+    const result = toNumbers.parse('一');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBeUndefined();
+  });
+});

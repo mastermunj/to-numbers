@@ -287,6 +287,41 @@ export function buildCurrencyWords(
 }
 
 /**
+ * Build ordinal word-to-number mapping from locale config
+ */
+export function buildOrdinalWordToNumberMap(
+  config: OriginalLocaleConfig,
+  caseSensitive: boolean = false,
+): WordNumberMap {
+  const ordinalWordToNumber: WordNumberMap = new Map();
+
+  // Process ordinalWordsMapping (e.g., First → 1, Second → 2)
+  if (config.ordinalWordsMapping) {
+    for (const mapping of config.ordinalWordsMapping) {
+      const words = extractWordValue(mapping.value);
+      for (const word of words) {
+        const normalized = normalizeWord(word, caseSensitive);
+        ordinalWordToNumber.set(normalized, toNumber(mapping.number));
+      }
+    }
+  }
+
+  // Process ordinalExactWordsMapping (e.g., "One Hundredth" → 100)
+  // These are kept as single entries for exact matching
+  if (config.ordinalExactWordsMapping) {
+    for (const mapping of config.ordinalExactWordsMapping) {
+      const words = extractWordValue(mapping.value);
+      for (const word of words) {
+        const normalized = normalizeWord(word, caseSensitive);
+        ordinalWordToNumber.set(normalized, toNumber(mapping.number));
+      }
+    }
+  }
+
+  return ordinalWordToNumber;
+}
+
+/**
  * Build complete parser locale config from original to-words locale
  */
 export function buildParserLocaleConfig(
@@ -298,6 +333,7 @@ export function buildParserLocaleConfig(
   const impliedDualWords = extractImpliedDualWords(config, caseSensitive);
   const oneWords = extractOneWords(wordToNumber);
   const currencyWords = buildCurrencyWords(config, caseSensitive);
+  const ordinalWordToNumber = buildOrdinalWordToNumberMap(config, caseSensitive);
 
   // Build text marker arrays (normalized)
   const texts = {
@@ -310,6 +346,59 @@ export function buildParserLocaleConfig(
   // Detect if the locale uses postfix "one" qualifiers
   const usesPostfixOne = detectUsesPostfixOne(config, scaleWords, oneWords, caseSensitive);
 
+  // ============ PRE-COMPUTE CACHED VALUES FOR PERFORMANCE ============
+
+  // Pre-sort phrases for tokenization (sorted by word count desc, then length desc)
+  const sortedPhrases = Array.from(wordToNumber.keys()).sort((a, b) => {
+    const wordsA = a.split(/\s+/).length;
+    const wordsB = b.split(/\s+/).length;
+    if (wordsB !== wordsA) return wordsB - wordsA;
+    return b.length - a.length;
+  });
+
+  // Pre-filter multi-word phrases only (for slow path in tokenizer)
+  const multiWordPhrases = sortedPhrases.filter((phrase) => phrase.includes(' '));
+
+  // Pre-compute special words for concatenated tokenization
+  const specialWords = [
+    ...texts.minus,
+    ...texts.point,
+    ...texts.and,
+    ...texts.only,
+    ...currencyWords.mainUnit,
+    ...currencyWords.fractionalUnit,
+    ...Array.from(ordinalWordToNumber.keys()),
+  ].filter((w) => w.length > 0);
+
+  // Pre-sort words for concatenated tokenization (sorted by length desc)
+  const allConcatenatedWords = [...Array.from(wordToNumber.keys()), ...specialWords];
+  const sortedConcatenatedWords = allConcatenatedWords.sort((a, b) => b.length - a.length);
+
+  // Create Set for O(1) 'and' word lookup
+  const andWordsSet = new Set(texts.and);
+
+  // Pre-compute currency unit Sets and multi-word arrays for O(1) lookup
+  const mainUnitSet = new Set<string>();
+  const fractionalUnitSet = new Set<string>();
+  const mainUnitMultiWord: string[][] = [];
+  const fractionalUnitMultiWord: string[][] = [];
+
+  for (const unit of currencyWords.mainUnit) {
+    if (unit.includes(' ')) {
+      mainUnitMultiWord.push(unit.split(' '));
+    } else {
+      mainUnitSet.add(unit);
+    }
+  }
+
+  for (const unit of currencyWords.fractionalUnit) {
+    if (unit.includes(' ')) {
+      fractionalUnitMultiWord.push(unit.split(' '));
+    } else {
+      fractionalUnitSet.add(unit);
+    }
+  }
+
   return {
     wordToNumber,
     scaleWords,
@@ -321,5 +410,17 @@ export function buildParserLocaleConfig(
     caseSensitive,
     trim: config.trim ?? false,
     splitWord: config.splitWord ? normalizeWord(config.splitWord, caseSensitive) : undefined,
+    ordinalWordToNumber,
+    ordinalSuffix: config.ordinalSuffix ? normalizeWord(config.ordinalSuffix, caseSensitive) : undefined,
+    // Cached values
+    sortedPhrases,
+    multiWordPhrases,
+    specialWords,
+    sortedConcatenatedWords,
+    andWordsSet,
+    mainUnitSet,
+    fractionalUnitSet,
+    mainUnitMultiWord,
+    fractionalUnitMultiWord,
   };
 }

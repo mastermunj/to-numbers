@@ -338,3 +338,38 @@ describe('Test Negative Floats - Lowercase', () => {
     expect(toNumbers.convert(input)).toBe(expected);
   });
 });
+
+// Ordinal number tests
+const testOrdinals: [string, number][] = [
+  ['ਪਹਿਲਾ', 1],
+  ['ਦੂਜਾ', 2],
+  ['ਤੀਜਾ', 3],
+  ['ਚੌਥਾ', 4],
+  ['ਪੰਜਵਾਂ', 5],
+  ['ਛੇਵਾਂ', 6],
+  ['ਸੱਤਵਾਂ', 7],
+  ['ਅੱਠਵਾਂ', 8],
+  ['ਨੌਂਵਾਂ', 9],
+  ['ਦਸਵਾਂ', 10],
+];
+
+describe('Test Ordinal Numbers', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Parse Result', () => {
+  test('parse returns isOrdinal true for ordinal input', () => {
+    const result = toNumbers.parse('ਪਹਿਲਾ');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBe(true);
+    expect(result.isCurrency).toBe(false);
+  });
+
+  test('parse returns isOrdinal undefined for cardinal input', () => {
+    const result = toNumbers.parse('ਇੱਕ');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBeUndefined();
+  });
+});

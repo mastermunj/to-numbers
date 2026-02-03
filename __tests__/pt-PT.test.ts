@@ -336,3 +336,43 @@ describe('Test Negative Floats - Lowercase', () => {
     expect(toNumbers.convert(input)).toBe(expected);
   });
 });
+
+// Ordinal number tests
+const testOrdinals: [string, number][] = [
+  ['Primeiro', 1],
+  ['Segundo', 2],
+  ['Terceiro', 3],
+  ['Quarto', 4],
+  ['Quinto', 5],
+  ['Décimo', 10],
+  ['Vigésimo', 20],
+  ['Centésimo', 100],
+  ['Milésimo', 1000],
+];
+
+describe('Test Ordinal Numbers', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Numbers - Lowercase', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal lowercase "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input.toLowerCase())).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Parse Result', () => {
+  test('parse returns isOrdinal true for ordinal input', () => {
+    const result = toNumbers.parse('Primeiro');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBe(true);
+    expect(result.isCurrency).toBe(false);
+  });
+
+  test('parse returns isOrdinal undefined for cardinal input', () => {
+    const result = toNumbers.parse('Um');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBeUndefined();
+  });
+});

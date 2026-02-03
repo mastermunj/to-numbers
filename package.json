@@ -69,6 +69,7 @@
     "dist/**/*"
   ],
   "scripts": {
+    "bench": "vitest bench",
     "build": "npm run clean && npm run build:types && npm run build:cjs && npm run build:esm && npm run build:umd && npm run build:pkgjson",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json",

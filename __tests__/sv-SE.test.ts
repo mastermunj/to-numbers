@@ -337,3 +337,42 @@ describe('Test Negative Floats - Lowercase', () => {
     expect(toNumbers.convert(input)).toBe(expected);
   });
 });
+
+// Ordinal number tests
+const testOrdinals: [string, number][] = [
+  ['Första', 1],
+  ['Andra', 2],
+  ['Tredje', 3],
+  ['Fjärde', 4],
+  ['Femte', 5],
+  ['Tionde', 10],
+  ['Tjugonde', 20],
+  ['Hundrade', 100],
+];
+
+describe('Test Ordinal Numbers', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Numbers - Lowercase', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal lowercase "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input.toLowerCase())).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Parse Result', () => {
+  test('parse returns isOrdinal true for ordinal input', () => {
+    const result = toNumbers.parse('Första');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBe(true);
+    expect(result.isCurrency).toBe(false);
+  });
+
+  test('parse returns isOrdinal undefined for cardinal input', () => {
+    const result = toNumbers.parse('Ett');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBeUndefined();
+  });
+});

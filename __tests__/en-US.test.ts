@@ -336,3 +336,62 @@ describe('Test Negative Floats - Lowercase', () => {
     expect(toNumbers.convert(input)).toBe(expected);
   });
 });
+
+// Ordinal number tests
+const testOrdinals: [string, number][] = [
+  ['First', 1],
+  ['Second', 2],
+  ['Third', 3],
+  ['Fourth', 4],
+  ['Fifth', 5],
+  ['Sixth', 6],
+  ['Seventh', 7],
+  ['Eighth', 8],
+  ['Ninth', 9],
+  ['Tenth', 10],
+  ['Eleventh', 11],
+  ['Twelfth', 12],
+  ['Thirteenth', 13],
+  ['Nineteenth', 19],
+  ['Twentieth', 20],
+  ['Twenty First', 21],
+  ['Twenty Second', 22],
+  ['Twenty Third', 23],
+  ['Thirtieth', 30],
+  ['Fortieth', 40],
+  ['Fiftieth', 50],
+  ['Hundredth', 100],
+  ['One Hundredth', 100],
+  ['One Hundred First', 101],
+  ['One Hundred Twenty Third', 123],
+  ['Thousandth', 1000],
+  ['One Thousand First', 1001],
+  ['Millionth', 1000000],
+];
+
+describe('Test Ordinal Numbers', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Numbers - Lowercase', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal lowercase "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input.toLowerCase())).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Parse Result', () => {
+  test('parse returns isOrdinal true for ordinal input', () => {
+    const result = toNumbers.parse('Twenty First');
+    expect(result.value).toBe(21);
+    expect(result.isOrdinal).toBe(true);
+    expect(result.isCurrency).toBe(false);
+  });
+
+  test('parse returns isOrdinal undefined for cardinal input', () => {
+    const result = toNumbers.parse('Twenty One');
+    expect(result.value).toBe(21);
+    expect(result.isOrdinal).toBeUndefined();
+  });
+});

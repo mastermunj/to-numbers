@@ -30,10 +30,6 @@ import { buildParserLocaleConfig } from './localeAdapter.js';
 
 export const DefaultConverterOptions: ConverterOptions = {
   currency: false,
-  ignoreDecimal: false,
-  ignoreZeroCurrency: false,
-  doNotAddOnly: false,
-  fractionalPrecision: 2,
 };
 
 export const DefaultToNumbersOptions: ToNumbersOptions = {
@@ -99,65 +95,112 @@ export class ToNumbersCore {
 
   /**
    * Tokenize input based on locale settings
+   * Uses pre-computed cached values for performance
    */
   protected getTokens(words: string): string[] {
     const config = this.getParserConfig();
     const cleaned = cleanInput(words);
 
     if (config.trim) {
-      // Collect all special words that need to be recognized
-      const specialWords = [
-        ...config.texts.minus,
-        ...config.texts.point,
-        ...config.texts.and,
-        ...config.texts.only,
-        ...config.currency.mainUnit,
-        ...config.currency.fractionalUnit,
-      ].filter((w) => w.length > 0);
-
-      // Use concatenated tokenizer for languages like Korean
-      return tokenizeConcatenated(cleaned, config.wordToNumber, config.caseSensitive, specialWords);
+      // Use pre-computed sortedConcatenatedWords for O(1) access instead of sorting on every call
+      return tokenizeConcatenated(
+        cleaned,
+        config.wordToNumber,
+        config.caseSensitive,
+        config.specialWords,
+        config.sortedConcatenatedWords,
+      );
     }
 
     return tokenize(cleaned, {
       caseSensitive: config.caseSensitive,
       wordMap: config.wordToNumber,
+      sortedPhrases: config.multiWordPhrases,
     });
   }
 
   /**
    * Convert words to a number
+   * Optimized: tokenizes once and reuses tokens for ordinal check and number parsing
    */
   public convert(words: string, options: ConverterOptions = {}): number {
-    options = Object.assign({}, this.options.converterOptions, options);
+    // Fast path: avoid Object.assign when no options passed (common case)
+    const hasCustomOptions = options.currency !== undefined || options.currencyOptions !== undefined;
+    const mergedOptions = hasCustomOptions
+      ? Object.assign({}, this.options.converterOptions, options)
+      : this.options.converterOptions || options;
 
     if (!this.isValidInput(words)) {
       throw new Error(`Invalid Input "${words}"`);
     }
 
-    if (options.currency) {
-      const result = this.parseCurrency(words, options);
+    if (mergedOptions.currency) {
+      const result = this.parseCurrency(words, mergedOptions);
       return result.value;
     }
 
-    return this.parseNumber(words, options);
+    // Tokenize once and reuse for both ordinal check and number parsing
+    const config = this.getParserConfig();
+    const tokens = this.getTokens(words);
+
+    if (tokens.length === 0) {
+      return 0;
+    }
+
+    // Try ordinal parsing first using pre-tokenized tokens
+    const ordinalResult = this.parseOrdinalFromTokens(tokens, config);
+    if (ordinalResult !== null) {
+      return ordinalResult;
+    }
+
+    // Parse as regular number using pre-tokenized tokens
+    return this.parseNumberFromTokens(tokens, config);
   }
 
   /**
    * Parse words and return detailed result
+   * Optimized: tokenizes once and reuses tokens
    */
   public parse(words: string, options: ConverterOptions = {}): ParseResult {
-    options = Object.assign({}, this.options.converterOptions, options);
+    // Fast path: avoid Object.assign when no options passed (common case)
+    const hasCustomOptions = options.currency !== undefined || options.currencyOptions !== undefined;
+    const mergedOptions = hasCustomOptions
+      ? Object.assign({}, this.options.converterOptions, options)
+      : this.options.converterOptions || options;
 
     if (!this.isValidInput(words)) {
       throw new Error(`Invalid Input "${words}"`);
     }
 
-    if (options.currency) {
-      return this.parseCurrency(words, options);
+    if (mergedOptions.currency) {
+      return this.parseCurrency(words, mergedOptions);
     }
 
-    const value = this.parseNumber(words, options);
+    // Tokenize once and reuse
+    const config = this.getParserConfig();
+    const tokens = this.getTokens(words);
+
+    if (tokens.length === 0) {
+      return {
+        value: 0,
+        isCurrency: false,
+        isNegative: false,
+      };
+    }
+
+    // Try ordinal parsing first using pre-tokenized tokens
+    const ordinalResult = this.parseOrdinalFromTokens(tokens, config);
+    if (ordinalResult !== null) {
+      return {
+        value: ordinalResult,
+        isCurrency: false,
+        isNegative: ordinalResult < 0,
+        isOrdinal: true,
+      };
+    }
+
+    // Parse as regular number using pre-tokenized tokens
+    const value = this.parseNumberFromTokens(tokens, config);
     return {
       value,
       isCurrency: false,
@@ -166,12 +209,19 @@ export class ToNumbersCore {
   }
 
   /**
-   * Parse a plain number (not currency)
+   * Parse a plain number (not currency) - public API that tokenizes
    */
-  protected parseNumber(words: string, options: ConverterOptions = {}): number {
+  protected parseNumber(words: string): number {
     const config = this.getParserConfig();
     const tokens = this.getTokens(words);
+    return this.parseNumberFromTokens(tokens, config);
+  }
 
+  /**
+   * Parse a plain number from pre-tokenized tokens
+   * Optimized to avoid unnecessary array allocations
+   */
+  protected parseNumberFromTokens(tokens: string[], config: ParserLocaleConfig): number {
     if (tokens.length === 0) {
       return 0;
     }
@@ -180,24 +230,48 @@ export class ToNumbersCore {
     let isNegative = false;
     let startIndex = 0;
 
-    if (tokens.length > 0 && config.texts.minus.includes(tokens[0])) {
+    if (config.texts.minus.includes(tokens[0])) {
       isNegative = true;
       startIndex = 1;
     }
 
+    // Fast path: no negative prefix, no decimal - most common case
+    if (startIndex === 0) {
+      // Check for decimal point directly in tokens
+      const pointIndex = this.findPointIndexInRange(tokens, 0, tokens.length, config);
+
+      if (pointIndex === -1) {
+        // No decimal point, parse entire array as integer
+        const result = this.parseIntegerTokens(tokens, config);
+        return result;
+      }
+
+      // Has decimal - need to slice for decimal handling
+      const integerTokens = tokens.slice(0, pointIndex);
+      const decimalTokens = tokens.slice(pointIndex + 1);
+
+      const integerPart = integerTokens.length > 0 ? this.parseIntegerTokens(integerTokens, config) : 0;
+      const decimalResult = this.parseDecimalTokens(decimalTokens, config);
+
+      if (decimalResult.places > 0) {
+        return this.combineIntegerAndDecimal(integerPart, decimalResult.value, decimalResult.places);
+      }
+      return integerPart;
+    }
+
+    // Has negative prefix - need to slice
     const numberTokens = tokens.slice(startIndex);
 
     // Check for decimal point
-    const pointIndex = this.findPointIndex(numberTokens, config);
+    const pointIndex = this.findPointIndexInRange(numberTokens, 0, numberTokens.length, config);
 
     let integerPart = 0;
     let decimalPart = 0;
     let decimalPlaces = 0;
 
-    if (pointIndex === -1 || options.ignoreDecimal) {
-      // No decimal point or ignoring decimals, parse as integer
-      const tokensToUse = pointIndex === -1 ? numberTokens : numberTokens.slice(0, pointIndex);
-      integerPart = this.parseIntegerTokens(tokensToUse, config);
+    if (pointIndex === -1) {
+      // No decimal point, parse as integer
+      integerPart = this.parseIntegerTokens(numberTokens, config);
     } else {
       // Parse integer and decimal parts
       const integerTokens = numberTokens.slice(0, pointIndex);
@@ -210,7 +284,7 @@ export class ToNumbersCore {
     }
 
     let result = integerPart;
-    if (!options.ignoreDecimal && pointIndex !== -1 && decimalPlaces > 0) {
+    if (pointIndex !== -1 && decimalPlaces > 0) {
       result = this.combineIntegerAndDecimal(integerPart, decimalPart, decimalPlaces);
     }
 
@@ -218,7 +292,107 @@ export class ToNumbersCore {
   }
 
   /**
+   * Check if the input contains ordinal words
+   * Returns the ordinal token info if found, or null if not an ordinal
+   */
+  protected detectOrdinal(
+    tokens: string[],
+    config: ParserLocaleConfig,
+  ): { isOrdinal: boolean; ordinalTokenIndex: number; ordinalValue: number } | null {
+    if (tokens.length === 0 || config.ordinalWordToNumber.size === 0) {
+      return null;
+    }
+
+    // For short inputs (≤4 tokens), check full phrase first
+    // Multi-word ordinals like "one hundredth" are typically 2-3 words max
+    if (tokens.length <= 4) {
+      const fullPhrase = tokens.join(' ');
+      const exactMatch = config.ordinalWordToNumber.get(fullPhrase);
+      if (exactMatch !== undefined) {
+        return { isOrdinal: true, ordinalTokenIndex: 0, ordinalValue: exactMatch };
+      }
+    }
+
+    // Check the last token for ordinal word
+    const lastToken = tokens[tokens.length - 1];
+    const ordinalValue = config.ordinalWordToNumber.get(lastToken);
+    if (ordinalValue !== undefined) {
+      return { isOrdinal: true, ordinalTokenIndex: tokens.length - 1, ordinalValue };
+    }
+
+    // Check for suffix-based ordinal (e.g., "Millionth" = "Million" + "th")
+    if (config.ordinalSuffix && lastToken.endsWith(config.ordinalSuffix)) {
+      const baseWord = lastToken.slice(0, -config.ordinalSuffix.length);
+      const baseValue = config.wordToNumber.get(baseWord);
+      if (baseValue !== undefined) {
+        return { isOrdinal: true, ordinalTokenIndex: tokens.length - 1, ordinalValue: baseValue };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Parse ordinal words to a number - public API that tokenizes
+   * "First" → 1, "Twenty Third" → 23, "One Hundredth" → 100
+   */
+  protected parseOrdinal(words: string): number | null {
+    const config = this.getParserConfig();
+    const tokens = this.getTokens(words);
+    return this.parseOrdinalFromTokens(tokens, config);
+  }
+
+  /**
+   * Parse ordinal from pre-tokenized tokens
+   * Optimized to avoid double tokenization
+   */
+  protected parseOrdinalFromTokens(tokens: string[], config: ParserLocaleConfig): number | null {
+    if (tokens.length === 0) {
+      return null;
+    }
+
+    // Check for negative (ordinals are typically non-negative, but handle gracefully)
+    let startIndex = 0;
+    if (config.texts.minus.includes(tokens[0])) {
+      startIndex = 1;
+    }
+
+    // Fast path: no negative prefix (common case)
+    const numberTokens = startIndex === 0 ? tokens : tokens.slice(startIndex);
+    if (numberTokens.length === 0) {
+      return null;
+    }
+
+    const ordinalInfo = this.detectOrdinal(numberTokens, config);
+    if (!ordinalInfo) {
+      return null;
+    }
+
+    // If only ordinal token (e.g., "First", "Second")
+    if (ordinalInfo.ordinalTokenIndex === 0 && numberTokens.length === 1) {
+      return ordinalInfo.ordinalValue;
+    }
+
+    // Check for exact match (full phrase like "One Hundredth")
+    if (ordinalInfo.ordinalTokenIndex === 0 && numberTokens.length > 1) {
+      // The full phrase matched, return the value directly
+      return ordinalInfo.ordinalValue;
+    }
+
+    // Composite ordinal: "Twenty Third" → "Twenty" (cardinal) + "Third" (ordinal)
+    // Parse the cardinal part (all tokens before the ordinal)
+    const cardinalTokens = numberTokens.slice(0, ordinalInfo.ordinalTokenIndex);
+    if (cardinalTokens.length === 0) {
+      return ordinalInfo.ordinalValue;
+    }
+
+    const cardinalPart = this.parseIntegerTokens(cardinalTokens, config);
+    return cardinalPart + ordinalInfo.ordinalValue;
+  }
+
+  /**
    * Parse currency format
+   * Optimized: uses pre-computed currency unit Sets for fast lookup
    */
   protected parseCurrency(words: string, options: ConverterOptions): ParseResult {
     const config = this.getParserConfig();
@@ -238,79 +412,90 @@ export class ToNumbersCore {
 
     // Check for negative indicator
     let isNegative = false;
-    let startIndex = 0;
+    let tokenStart = 0;
 
-    if (tokens.length > 0 && config.texts.minus.includes(tokens[0])) {
+    if (config.texts.minus.includes(tokens[0])) {
       isNegative = true;
-      startIndex = 1;
+      tokenStart = 1;
     }
 
-    let numberTokens = tokens.slice(startIndex);
-
-    // Remove "only" suffix if present (unless doNotAddOnly is set - for backwards compat)
-    if (numberTokens.length > 0 && config.texts.only.includes(numberTokens[numberTokens.length - 1])) {
-      numberTokens = numberTokens.slice(0, -1);
+    // Check for "only" suffix
+    let tokenEnd = tokens.length;
+    if (tokenEnd > tokenStart && config.texts.only.includes(tokens[tokenEnd - 1])) {
+      tokenEnd--;
     }
 
-    // Use custom currency options if provided
-    const currencyConfig = this.getCurrencyConfig(options);
+    // Fast path: use pre-computed Sets when no custom currency options
+    let mainUnitMatch: { startIndex: number; endIndex: number } | null;
+    let fractionalUnitMatch: { startIndex: number; endIndex: number } | null;
 
-    // Find currency unit position (now returns start and end indices for multi-word support)
-    const mainUnitMatch = this.findCurrencyUnitIndex(numberTokens, currencyConfig.mainUnit);
-    const fractionalUnitMatch = this.findCurrencyUnitIndex(numberTokens, currencyConfig.fractionalUnit);
+    if (!options.currencyOptions) {
+      // Use pre-computed Sets for O(1) lookup
+      mainUnitMatch = this.findCurrencyUnitInRange(
+        tokens,
+        tokenStart,
+        tokenEnd,
+        config.mainUnitSet,
+        config.mainUnitMultiWord,
+      );
+      fractionalUnitMatch = this.findCurrencyUnitInRange(
+        tokens,
+        tokenStart,
+        tokenEnd,
+        config.fractionalUnitSet,
+        config.fractionalUnitMultiWord,
+      );
+    } else {
+      // Custom options - need to build temporary Sets
+      const customConfig = this.getCurrencyConfig(options);
+      mainUnitMatch = this.findCurrencyUnitInRange(
+        tokens,
+        tokenStart,
+        tokenEnd,
+        new Set(customConfig.mainUnit.filter((u) => !u.includes(' '))),
+        customConfig.mainUnit.filter((u) => u.includes(' ')).map((u) => u.split(' ')),
+      );
+      fractionalUnitMatch = this.findCurrencyUnitInRange(
+        tokens,
+        tokenStart,
+        tokenEnd,
+        new Set(customConfig.fractionalUnit.filter((u) => !u.includes(' '))),
+        customConfig.fractionalUnit.filter((u) => u.includes(' ')).map((u) => u.split(' ')),
+      );
+    }
 
     let mainAmount = 0;
     let fractionalAmount = 0;
 
     if (mainUnitMatch === null && fractionalUnitMatch === null) {
       // No currency units found, treat as plain number
-      mainAmount = this.parseIntegerTokens(numberTokens, config);
+      mainAmount = this.parseIntegerTokensInRange(tokens, tokenStart, tokenEnd, config);
     } else if (mainUnitMatch !== null && fractionalUnitMatch === null) {
       // Only main currency unit
-      const mainTokens = numberTokens.slice(0, mainUnitMatch.startIndex);
-      mainAmount = this.parseIntegerTokens(mainTokens, config);
+      mainAmount = this.parseIntegerTokensInRange(tokens, tokenStart, mainUnitMatch.startIndex, config);
     } else if (mainUnitMatch === null && fractionalUnitMatch !== null) {
       // Only fractional unit
-      const fractionalTokens = numberTokens.slice(0, fractionalUnitMatch.startIndex);
-      fractionalAmount = this.parseIntegerTokens(fractionalTokens, config);
+      fractionalAmount = this.parseIntegerTokensInRange(tokens, tokenStart, fractionalUnitMatch.startIndex, config);
     } else if (mainUnitMatch !== null && fractionalUnitMatch !== null) {
       // Both units present
-      const mainTokens = numberTokens.slice(0, mainUnitMatch.startIndex);
-      mainAmount = this.parseIntegerTokens(mainTokens, config);
+      mainAmount = this.parseIntegerTokensInRange(tokens, tokenStart, mainUnitMatch.startIndex, config);
 
       // Find "and" separator between main and fractional
       let fractionalStart = mainUnitMatch.endIndex;
-      if (fractionalStart < numberTokens.length && config.texts.and.includes(numberTokens[fractionalStart])) {
+      if (fractionalStart < tokenEnd && config.andWordsSet.has(tokens[fractionalStart])) {
         fractionalStart++;
       }
 
-      const fractionalTokens = numberTokens.slice(fractionalStart, fractionalUnitMatch.startIndex);
-      fractionalAmount = this.parseIntegerTokens(fractionalTokens, config);
+      fractionalAmount = this.parseIntegerTokensInRange(
+        tokens,
+        fractionalStart,
+        fractionalUnitMatch.startIndex,
+        config,
+      );
     }
 
-    // Handle ignoreZeroCurrency option
-    if (options.ignoreZeroCurrency && mainAmount === 0 && fractionalAmount === 0) {
-      return {
-        value: 0,
-        isCurrency: true,
-        isNegative: false,
-        currencyInfo: {
-          mainAmount: 0,
-          fractionalAmount: 0,
-        },
-      };
-    }
-
-    // Combine main and fractional amounts
-    const precision = options.fractionalPrecision ?? 2;
-    const divisor = Math.pow(10, precision);
-    let value = mainAmount + fractionalAmount / divisor;
-
-    // Handle ignoreDecimal for currency
-    if (options.ignoreDecimal) {
-      value = mainAmount;
-      fractionalAmount = 0;
-    }
+    // Combine main and fractional amounts (always 2 decimal places for currency)
+    const value = mainAmount + fractionalAmount / 100;
 
     return {
       value: isNegative ? -value : value,
@@ -318,9 +503,101 @@ export class ToNumbersCore {
       isNegative,
       currencyInfo: {
         mainAmount,
-        fractionalAmount: options.ignoreDecimal ? 0 : fractionalAmount,
+        fractionalAmount,
       },
     };
+  }
+
+  /**
+   * Find currency unit in a range of tokens using pre-computed Sets
+   * Returns absolute indices (not relative to start)
+   */
+  protected findCurrencyUnitInRange(
+    tokens: string[],
+    start: number,
+    end: number,
+    singleWordSet: Set<string>,
+    multiWordUnits: string[][],
+  ): { startIndex: number; endIndex: number } | null {
+    for (let i = start; i < end; i++) {
+      // First check for multi-word matches starting at position i
+      for (const unitParts of multiWordUnits) {
+        let matches = true;
+        for (let j = 0; j < unitParts.length; j++) {
+          if (i + j >= end || tokens[i + j] !== unitParts[j]) {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          return { startIndex: i, endIndex: i + unitParts.length };
+        }
+      }
+
+      // Then check for single token match using Set for O(1) lookup
+      if (singleWordSet.has(tokens[i])) {
+        return { startIndex: i, endIndex: i + 1 };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Parse integer tokens in a range (without creating a new array)
+   */
+  protected parseIntegerTokensInRange(
+    tokens: string[],
+    start: number,
+    end: number,
+    config: ParserLocaleConfig,
+  ): number {
+    if (start >= end) {
+      return 0;
+    }
+
+    // Fast path: filter "and" words and collect scale positions in one pass
+    const hasAndWords = config.andWordsSet.size > 0;
+    const filteredTokens: string[] = [];
+    const scalePositions: Array<{ filteredIndex: number; value: number; token: string }> = [];
+
+    for (let i = start; i < end; i++) {
+      const token = tokens[i];
+      if (hasAndWords && config.andWordsSet.has(token)) {
+        continue;
+      }
+      const num = config.wordToNumber.get(token);
+      if (num !== undefined && config.scaleWords.has(num)) {
+        scalePositions.push({ filteredIndex: filteredTokens.length, value: num, token });
+      }
+      filteredTokens.push(token);
+    }
+
+    if (filteredTokens.length === 0) {
+      return 0;
+    }
+
+    // Fast path: no scale words, just sum the simple numbers
+    if (scalePositions.length === 0) {
+      let sum = 0;
+      for (const token of filteredTokens) {
+        const num = config.wordToNumber.get(token);
+        if (num !== undefined) {
+          sum += num;
+        }
+      }
+      return sum;
+    }
+
+    // We have scale words - use the optimized parser with pre-computed scale positions
+    return this.parseIntegerTokensWithScales(
+      filteredTokens,
+      0,
+      filteredTokens.length,
+      config,
+      scalePositions,
+      0,
+      scalePositions.length,
+    );
   }
 
   /**
@@ -369,73 +646,357 @@ export class ToNumbersCore {
 
   /**
    * Parse integer tokens into a number
-   * Uses recursive descent for scale words
+   * Optimized iterative approach: processes scale words from highest to lowest
+   * to minimize array allocations and recursive calls
    */
   protected parseIntegerTokens(tokens: string[], config: ParserLocaleConfig): number {
     if (tokens.length === 0) {
       return 0;
     }
 
-    // Filter out "and" words
-    tokens = tokens.filter((token) => !config.texts.and.includes(token));
+    // Fast path: if no "and" words, we can work directly with the original tokens
+    const hasAndWords = config.andWordsSet.size > 0;
 
-    if (tokens.length === 0) {
+    if (!hasAndWords) {
+      // No "and" words - work directly with original tokens (avoids allocation)
+      return this.parseIntegerTokensNoAnd(tokens, config);
+    }
+
+    // Has "and" words - need to filter them out first
+    // Single pass: collect scale word positions AND filter tokens simultaneously
+    let highestScaleValue = 0;
+    let effectiveLength = 0;
+
+    const scalePositions: Array<{ filteredIndex: number; value: number; token: string }> = [];
+
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (config.andWordsSet.has(token)) {
+        continue; // Skip "and" words
+      }
+      const num = config.wordToNumber.get(token);
+      if (num !== undefined && config.scaleWords.has(num)) {
+        scalePositions.push({ filteredIndex: effectiveLength, value: num, token });
+        if (num > highestScaleValue) {
+          highestScaleValue = num;
+        }
+      }
+      effectiveLength++;
+    }
+
+    if (effectiveLength === 0) {
       return 0;
     }
 
-    // Find the highest scale word
-    const scaleInfo = this.findHighestScale(tokens, config);
-
-    if (scaleInfo === null) {
-      // No scale words, sum up simple numbers
-      return this.sumSimpleNumbers(tokens, config);
+    // Fast path: no scale words, just sum the simple numbers
+    if (scalePositions.length === 0) {
+      let sum = 0;
+      for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        if (config.andWordsSet.has(token)) {
+          continue;
+        }
+        const num = config.wordToNumber.get(token);
+        if (num !== undefined) {
+          sum += num;
+        }
+      }
+      return sum;
     }
 
-    const { index, value: scaleValue, token: scaleToken } = scaleInfo;
-    const leftTokens = tokens.slice(0, index);
-    const rightTokens = tokens.slice(index + 1);
+    // Build filtered array for locales with "and" words
+    const filteredTokens: string[] = new Array(effectiveLength);
+    let filteredIdx = 0;
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      if (!config.andWordsSet.has(token)) {
+        filteredTokens[filteredIdx++] = token;
+      }
+    }
+
+    return this.parseIntegerTokensWithScales(
+      filteredTokens,
+      0,
+      effectiveLength,
+      config,
+      scalePositions,
+      0,
+      scalePositions.length,
+    );
+  }
+
+  /**
+   * Optimized path for locales without "and" words (most common case)
+   * Avoids creating a filtered array by working directly with original tokens
+   * Uses parallel arrays instead of object array for better cache locality
+   */
+  protected parseIntegerTokensNoAnd(tokens: string[], config: ParserLocaleConfig): number {
+    const len = tokens.length;
+
+    // Single pass: collect scale positions using parallel arrays (better cache locality)
+    // Pre-allocate with reasonable capacity to avoid resizing
+    const scaleIndices: number[] = [];
+    const scaleValues: number[] = [];
+    const scaleTokens: string[] = [];
+
+    for (let i = 0; i < len; i++) {
+      const token = tokens[i];
+      const num = config.wordToNumber.get(token);
+      if (num !== undefined && config.scaleWords.has(num)) {
+        scaleIndices.push(i);
+        scaleValues.push(num);
+        scaleTokens.push(token);
+      }
+    }
+
+    const scaleCount = scaleIndices.length;
+
+    // Fast path: no scale words, just sum all numbers
+    if (scaleCount === 0) {
+      let sum = 0;
+      for (let i = 0; i < len; i++) {
+        const num = config.wordToNumber.get(tokens[i]);
+        if (num !== undefined) {
+          sum += num;
+        }
+      }
+      return sum;
+    }
+
+    // Use parallel arrays for the recursive parser
+    return this.parseWithParallelScales(tokens, 0, len, config, scaleIndices, scaleValues, scaleTokens, 0, scaleCount);
+  }
+
+  /**
+   * Iterative parser using parallel arrays for scale word tracking
+   * Better cache locality than object arrays
+   */
+  protected parseWithParallelScales(
+    tokens: string[],
+    start: number,
+    end: number,
+    config: ParserLocaleConfig,
+    scaleIndices: number[],
+    scaleValues: number[],
+    scaleTokens: string[],
+    scaleStart: number,
+    scaleEnd: number,
+  ): number {
+    if (start >= end) {
+      return 0;
+    }
+
+    // Find the highest scale word in the given scale range that's within [start, end)
+    let highestIdx = -1;
+    let highestValue = 0;
+    let highestToken = '';
+    let highestScalePos = -1;
+
+    for (let i = scaleStart; i < scaleEnd; i++) {
+      const idx = scaleIndices[i];
+      if (idx >= start && idx < end) {
+        const val = scaleValues[i];
+        if (val > highestValue) {
+          highestValue = val;
+          highestIdx = idx;
+          highestToken = scaleTokens[i];
+          highestScalePos = i;
+        }
+      }
+    }
+
+    if (highestIdx === -1) {
+      // No scale words in this range, sum up simple numbers
+      let sum = 0;
+      for (let i = start; i < end; i++) {
+        const num = config.wordToNumber.get(tokens[i]);
+        if (num !== undefined) {
+          sum += num;
+        }
+      }
+      return sum;
+    }
 
     // Parse left side (multiplier for the scale)
     let leftValue = 1;
-    const hasExplicitLeftCoefficient = leftTokens.length > 0;
+    const hasExplicitLeftCoefficient = highestIdx > start;
     if (hasExplicitLeftCoefficient) {
-      leftValue = this.parseIntegerTokens(leftTokens, config);
+      leftValue = this.parseWithParallelScales(
+        tokens,
+        start,
+        highestIdx,
+        config,
+        scaleIndices,
+        scaleValues,
+        scaleTokens,
+        scaleStart,
+        highestScalePos,
+      );
       if (leftValue === 0) {
         leftValue = 1;
       }
-    } else if (config.impliedDualWords.has(scaleToken)) {
-      // If no left side and this is an "implied dual" word (like Italian "Milioni"),
-      // the coefficient is 2 (e.g., "Milioni" alone = 2 million)
+    } else if (config.impliedDualWords.has(highestToken)) {
       leftValue = 2;
     }
 
     // Parse right side (remainder after scale)
-    // Special case: In some languages like Swahili, "<scale> <one>" is a postfix
-    // qualifier meaning "one of that scale" (e.g., "Mia Moja" = 100, not 101).
-    // This ONLY applies when:
-    // 1. The locale uses postfix one qualifiers (usesPostfixOne is true)
-    // 2. There's NO explicit left coefficient (using implicit 1)
-    // 3. Right side is exactly one token that's a "one" word
-    // 4. There are no remaining scale words in the right tokens
-    // When there IS a left coefficient (e.g., "Moja Mia Moja" = 101), the trailing
-    // "one" is a remainder, not a postfix.
     let rightValue = 0;
-    if (rightTokens.length > 0) {
+    const rightStart = highestIdx + 1;
+    if (rightStart < end) {
       // Check for the "<scale> <one>" postfix pattern
-      const isOneWordPostfix =
+      const rightLength = end - rightStart;
+      if (
         config.usesPostfixOne &&
         !hasExplicitLeftCoefficient &&
-        rightTokens.length === 1 &&
-        config.oneWords.has(rightTokens[0]) &&
-        this.findHighestScale(rightTokens, config) === null;
-
-      if (!isOneWordPostfix) {
-        rightValue = this.parseIntegerTokens(rightTokens, config);
+        rightLength === 1 &&
+        config.oneWords.has(tokens[rightStart])
+      ) {
+        const rightNum = config.wordToNumber.get(tokens[rightStart]);
+        const isScaleWord = rightNum !== undefined && config.scaleWords.has(rightNum);
+        if (!isScaleWord) {
+          rightValue = 0;
+        } else {
+          rightValue = this.parseWithParallelScales(
+            tokens,
+            rightStart,
+            end,
+            config,
+            scaleIndices,
+            scaleValues,
+            scaleTokens,
+            highestScalePos + 1,
+            scaleEnd,
+          );
+        }
+      } else {
+        rightValue = this.parseWithParallelScales(
+          tokens,
+          rightStart,
+          end,
+          config,
+          scaleIndices,
+          scaleValues,
+          scaleTokens,
+          highestScalePos + 1,
+          scaleEnd,
+        );
       }
-      // If it IS a one-word postfix, rightValue stays 0 (don't add the 1)
     }
 
-    return leftValue * scaleValue + rightValue;
+    return leftValue * highestValue + rightValue;
+  }
+
+  /**
+   * Iterative integer parser that uses pre-computed scale positions
+   * Avoids rescanning for scale words in each recursive call
+   */
+  protected parseIntegerTokensWithScales(
+    tokens: string[],
+    start: number,
+    end: number,
+    config: ParserLocaleConfig,
+    scalePositions: Array<{ filteredIndex: number; value: number; token: string }>,
+    scaleStart: number,
+    scaleEnd: number,
+  ): number {
+    if (start >= end) {
+      return 0;
+    }
+
+    // Find the highest scale word in the given scale range that's within [start, end)
+    let highestIdx = -1;
+    let highestValue = 0;
+    let highestToken = '';
+    let highestScalePos = -1;
+
+    for (let i = scaleStart; i < scaleEnd; i++) {
+      const sp = scalePositions[i];
+      if (sp.filteredIndex >= start && sp.filteredIndex < end) {
+        if (sp.value > highestValue) {
+          highestValue = sp.value;
+          highestIdx = sp.filteredIndex;
+          highestToken = sp.token;
+          highestScalePos = i;
+        }
+      }
+    }
+
+    if (highestIdx === -1) {
+      // No scale words in this range, sum up simple numbers
+      let sum = 0;
+      for (let i = start; i < end; i++) {
+        const num = config.wordToNumber.get(tokens[i]);
+        if (num !== undefined) {
+          sum += num;
+        }
+      }
+      return sum;
+    }
+
+    // Parse left side (multiplier for the scale)
+    let leftValue = 1;
+    const hasExplicitLeftCoefficient = highestIdx > start;
+    if (hasExplicitLeftCoefficient) {
+      // Recursively parse left side with scale positions before the highest
+      leftValue = this.parseIntegerTokensWithScales(
+        tokens,
+        start,
+        highestIdx,
+        config,
+        scalePositions,
+        scaleStart,
+        highestScalePos,
+      );
+      if (leftValue === 0) {
+        leftValue = 1;
+      }
+    } else if (config.impliedDualWords.has(highestToken)) {
+      leftValue = 2;
+    }
+
+    // Parse right side (remainder after scale)
+    let rightValue = 0;
+    const rightStart = highestIdx + 1;
+    if (rightStart < end) {
+      // Check for the "<scale> <one>" postfix pattern
+      const rightLength = end - rightStart;
+      if (
+        config.usesPostfixOne &&
+        !hasExplicitLeftCoefficient &&
+        rightLength === 1 &&
+        config.oneWords.has(tokens[rightStart])
+      ) {
+        // Check if this single token is a scale word
+        const rightNum = config.wordToNumber.get(tokens[rightStart]);
+        const isScaleWord = rightNum !== undefined && config.scaleWords.has(rightNum);
+        if (!isScaleWord) {
+          // It's a postfix one, don't add it
+          rightValue = 0;
+        } else {
+          rightValue = this.parseIntegerTokensWithScales(
+            tokens,
+            rightStart,
+            end,
+            config,
+            scalePositions,
+            highestScalePos + 1,
+            scaleEnd,
+          );
+        }
+      } else {
+        rightValue = this.parseIntegerTokensWithScales(
+          tokens,
+          rightStart,
+          end,
+          config,
+          scalePositions,
+          highestScalePos + 1,
+          scaleEnd,
+        );
+      }
+    }
+
+    return leftValue * highestValue + rightValue;
   }
 
   /**
@@ -498,116 +1059,28 @@ export class ToNumbersCore {
   }
 
   /**
-   * Find the index of a point/decimal separator
-   * Special handling: if point === and, we need more sophisticated detection
-   * to avoid false positives where "and" is just connecting numbers
+   * Find the index of a point/decimal separator within a range
+   * Optimized version that works on a range without creating new arrays
    */
-  protected findPointIndex(tokens: string[], config: ParserLocaleConfig): number {
+  protected findPointIndexInRange(tokens: string[], start: number, end: number, config: ParserLocaleConfig): number {
     // If point and 'and' words are the same, we can't reliably distinguish them
-    // for plain number parsing - only use point in currency context
     const pointWord = config.texts.point[0];
     const andWord = config.texts.and[0];
     if (pointWord && andWord && pointWord === andWord) {
-      // When point === and, don't treat it as decimal for plain numbers
-      // Currency parsing has its own logic that handles this differently
       return -1;
     }
 
-    for (let i = 0; i < tokens.length; i++) {
+    for (let i = start; i < end; i++) {
       if (config.texts.point.includes(tokens[i])) {
-        return i;
+        return i - start; // Return relative index
       }
     }
     return -1;
   }
 
   /**
-   * Find the index of a currency unit in tokens
-   * Returns the start index of the matched currency unit phrase (where to slice before)
-   * and the end index (where to continue from after the unit)
-   * Handles both single-word and multi-word currency names
-   */
-  protected findCurrencyUnitIndex(
-    tokens: string[],
-    unitWords: string[],
-  ): { startIndex: number; endIndex: number } | null {
-    for (let i = 0; i < tokens.length; i++) {
-      // First check for multi-word matches starting at position i (check longer matches first)
-      for (const unitWord of unitWords) {
-        const unitParts = unitWord.split(' ');
-        if (unitParts.length > 1) {
-          // Check if consecutive tokens match the multi-word unit
-          let matches = true;
-          for (let j = 0; j < unitParts.length; j++) {
-            if (i + j >= tokens.length || tokens[i + j] !== unitParts[j]) {
-              matches = false;
-              break;
-            }
-          }
-          if (matches) {
-            // Return start and end indices
-            return { startIndex: i, endIndex: i + unitParts.length };
-          }
-        }
-      }
-
-      // Then check for single token match
-      if (unitWords.includes(tokens[i])) {
-        return { startIndex: i, endIndex: i + 1 };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Find the highest scale word in tokens
-   */
-  protected findHighestScale(
-    tokens: string[],
-    config: ParserLocaleConfig,
-  ): { index: number; value: number; token: string } | null {
-    let highestIndex = -1;
-    let highestValue = 0;
-    let highestToken = '';
-
-    for (let i = 0; i < tokens.length; i++) {
-      const token = tokens[i];
-      const number = config.wordToNumber.get(token);
-
-      if (number !== undefined && config.scaleWords.has(number)) {
-        if (number > highestValue) {
-          highestValue = number;
-          highestIndex = i;
-          highestToken = token;
-        }
-      }
-    }
-
-    if (highestIndex === -1) {
-      return null;
-    }
-
-    return { index: highestIndex, value: highestValue, token: highestToken };
-  }
-
-  /**
-   * Sum simple number words (no scale words)
-   */
-  protected sumSimpleNumbers(tokens: string[], config: ParserLocaleConfig): number {
-    let sum = 0;
-
-    for (const token of tokens) {
-      const number = config.wordToNumber.get(token);
-      if (number !== undefined) {
-        sum += number;
-      }
-    }
-
-    return sum;
-  }
-
-  /**
    * Check if input is valid
+   * Optimized to avoid calling cleanInput for performance
    */
   public isValidInput(input: string | null | undefined): boolean {
     if (input === null || input === undefined) {
@@ -618,7 +1091,15 @@ export class ToNumbersCore {
       return false;
     }
 
-    const cleaned = cleanInput(input);
-    return cleaned.length > 0;
+    // Fast path: just check if there's any non-whitespace content
+    // Avoid calling cleanInput which does regex operations
+    for (let i = 0; i < input.length; i++) {
+      const c = input.charCodeAt(i);
+      // Check for non-whitespace (space, tab, newline, carriage return)
+      if (c !== 32 && c !== 9 && c !== 10 && c !== 13) {
+        return true;
+      }
+    }
+    return false;
   }
 }
