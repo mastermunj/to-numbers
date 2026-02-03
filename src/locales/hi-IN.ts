@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -21,6 +22,11 @@ export default class Locale implements LocaleInterface {
       point: 'दशांश',
     },
     numberWordsMapping: [
+      { number: 100000000000000000n, value: 'शंख' },
+      { number: 1000000000000000n, value: 'पद्म' },
+      { number: 10000000000000n, value: 'नील' },
+      { number: 100000000000n, value: 'खरब' },
+      { number: 1000000000n, value: 'अरब' },
       { number: 10000000, value: 'करोड़' },
       { number: 100000, value: 'लाख' },
       { number: 1000, value: 'हज़ार' },
@@ -70,7 +76,7 @@ export default class Locale implements LocaleInterface {
       { number: 57, value: 'सत्तावन' },
       { number: 56, value: 'छप्पन' },
       { number: 55, value: 'पचपन' },
-      { number: 54, value: 'चौबन' },
+      { number: 54, value: 'चौवन' },
       { number: 53, value: 'तिरेपन' },
       { number: 52, value: 'बावन' },
       { number: 51, value: 'इक्याबन' },
@@ -126,5 +132,25 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'एक' },
       { number: 0, value: 'शून्य' },
     ],
+    ordinalWordsMapping: [
+      { number: 100, value: 'सौवाँ' },
+      { number: 10, value: 'दसवाँ' },
+      { number: 9, value: 'नौवाँ' },
+      { number: 8, value: 'आठवाँ' },
+      { number: 7, value: 'सातवाँ' },
+      { number: 6, value: 'छठा' },
+      { number: 5, value: 'पाँचवाँ' },
+      { number: 4, value: 'चौथा' },
+      { number: 3, value: 'तीसरा' },
+      { number: 2, value: 'दूसरा' },
+      { number: 1, value: 'पहला' },
+    ],
   };
+}
+
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

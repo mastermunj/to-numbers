@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -81,8 +82,63 @@ export default class Locale implements LocaleInterface {
         value: 'Ükssada',
       },
     ],
+    ordinalWordsMapping: [
+      { number: 1000000000000000, value: 'Kvadriljonines' },
+      { number: 1000000000000, value: 'Triljonines' },
+      { number: 1000000000, value: 'Miljardines' },
+      { number: 1000000, value: 'Miljonines' },
+      { number: 1000, value: 'Tuhandenes' },
+      { number: 900, value: 'Üheksasajanes' },
+      { number: 800, value: 'Kaheksasajanes' },
+      { number: 700, value: 'Seitsesajanes' },
+      { number: 600, value: 'Kuussajanes' },
+      { number: 500, value: 'Viissajanes' },
+      { number: 400, value: 'Nelisajanes' },
+      { number: 300, value: 'Kolmsajanes' },
+      { number: 200, value: 'Kakssajanes' },
+      { number: 100, value: 'Sajanes' },
+      { number: 90, value: 'Üheksakümnenes' },
+      { number: 80, value: 'Kaheksakümnenes' },
+      { number: 70, value: 'Seitsekümnenes' },
+      { number: 60, value: 'Kuuskümnenes' },
+      { number: 50, value: 'Viiskümnenes' },
+      { number: 40, value: 'Nelikümnenes' },
+      { number: 30, value: 'Kolmkümnenes' },
+      { number: 20, value: 'Kakskümnenes' },
+      { number: 19, value: 'Üheksateistkümnenes' },
+      { number: 18, value: 'Kaheksateistkümnenes' },
+      { number: 17, value: 'Seitseteistkümnenes' },
+      { number: 16, value: 'Kuusteistkümnenes' },
+      { number: 15, value: 'Viisteistkümnenes' },
+      { number: 14, value: 'Neliteistkümnenes' },
+      { number: 13, value: 'Kolmteistkümnenes' },
+      { number: 12, value: 'Kaksteistkümnenes' },
+      { number: 11, value: 'Üksteistkümnenes' },
+      { number: 10, value: 'Kümnenes' },
+      { number: 9, value: 'Üheksas' },
+      { number: 8, value: 'Kaheksas' },
+      { number: 7, value: 'Seitsmes' },
+      { number: 6, value: 'Kuues' },
+      { number: 5, value: 'Viies' },
+      { number: 4, value: 'Neljas' },
+      { number: 3, value: 'Kolmas' },
+      { number: 2, value: 'Teine' },
+      { number: 1, value: 'Esimene' },
+      { number: 0, value: 'Nullis' },
+    ],
     pluralWords: ['Miljon', 'Miljard', 'Trillion', 'Kvadriljon'],
     pluralMark: 'it',
     onlyInFront: true,
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need ee-EE locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

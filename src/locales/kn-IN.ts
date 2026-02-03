@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -21,6 +22,11 @@ export default class Locale implements LocaleInterface {
       point: 'ದಶಾಂಶ',
     },
     numberWordsMapping: [
+      { number: 100000000000000000n, value: 'ಶಂಖ' },
+      { number: 1000000000000000n, value: 'ಪದ್ಮ' },
+      { number: 10000000000000n, value: 'ನೀಲ್' },
+      { number: 100000000000n, value: 'ಖರಬ್' },
+      { number: 1000000000n, value: 'ಅರಬ್' },
       { number: 10000000, value: 'ಕೋಟಿ' },
       { number: 100000, value: 'ಲಕ್ಷ' },
       { number: 1000, value: 'ಸಾವಿರ' },
@@ -126,5 +132,29 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'ಒಂದು' },
       { number: 0, value: 'ಶೂನ್ಯ' },
     ],
+    ordinalWordsMapping: [
+      { number: 100, value: 'ನೂರನೆಯ' },
+      { number: 10, value: 'ಹತ್ತನೆಯ' },
+      { number: 9, value: 'ಒಂಬತ್ತನೆಯ' },
+      { number: 8, value: 'ಎಂಟನೆಯ' },
+      { number: 7, value: 'ಏಳನೆಯ' },
+      { number: 6, value: 'ಆರನೆಯ' },
+      { number: 5, value: 'ಐದನೆಯ' },
+      { number: 4, value: 'ನಾಲ್ಕನೆಯ' },
+      { number: 3, value: 'ಮೂರನೆಯ' },
+      { number: 2, value: 'ಎರಡನೆಯ' },
+      { number: 1, value: 'ಮೊದಲನೆಯ' },
+    ],
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need kn-IN locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

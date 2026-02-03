@@ -10,6 +10,7 @@ export interface ParseResult {
   value: number;
   isCurrency: boolean;
   isNegative: boolean;
+  isOrdinal?: boolean;
   currencyInfo?: {
     mainAmount: number;
     fractionalAmount: number;
@@ -40,10 +41,10 @@ export interface CurrencyOptions {
  * Converter options for parsing
  */
 export type ConverterOptions = {
+  // Force currency parsing mode (true), force plain number mode (false), or auto-detect (undefined)
   currency?: boolean;
-  ignoreDecimal?: boolean;
-  // For currency parsing, specifies fractional precision (default: 2)
-  fractionalPrecision?: number;
+  // Override currency options for parsing
+  currencyOptions?: Partial<CurrencyOptions>;
 };
 
 /**
@@ -63,9 +64,10 @@ export interface ConstructorOf<T> {
 
 /**
  * Number word mapping (same as to-words)
+ * Supports bigint for extremely large numbers
  */
 export type NumberWordMap = {
-  number: number;
+  number: number | bigint;
   value: string | [string, string];
   singularValue?: string;
 };
@@ -83,6 +85,25 @@ export interface ParserLocaleConfig {
    * Scale words (hundred, thousand, million, etc.)
    */
   scaleWords: Set<number>;
+
+  /**
+   * Words that imply a coefficient of 2 when appearing alone as a scale word
+   * (e.g., Italian "Milioni" = 2 million, but "Dieci Milioni" = 10 million)
+   */
+  impliedDualWords: Set<string>;
+
+  /**
+   * Words that represent the number 1 (used to detect postfix qualifiers like
+   * Swahili "Mia Moja" = hundred one = 100, where "Moja" shouldn't add 1)
+   */
+  oneWords: Set<string>;
+
+  /**
+   * Whether the locale uses postfix "one" qualifiers for scale words.
+   * In Swahili, "Mia Moja" (hundred one) = 100, not 101.
+   * This is detected by the presence of "<scale> <one>" patterns in exactWordsMapping.
+   */
+  usesPostfixOne: boolean;
 
   /**
    * Text markers for parsing
@@ -116,6 +137,67 @@ export interface ParserLocaleConfig {
    * Split word used between compound numbers (e.g., "and" in some locales)
    */
   splitWord?: string;
+
+  /**
+   * Ordinal word to number mapping (e.g., "first" → 1, "second" → 2)
+   */
+  ordinalWordToNumber: WordNumberMap;
+
+  /**
+   * Ordinal suffix for suffix-based ordinals (e.g., "th" for "millionth")
+   */
+  ordinalSuffix?: string;
+
+  // ============ CACHED/PRECOMPUTED FIELDS FOR PERFORMANCE ============
+
+  /**
+   * Pre-sorted phrases for tokenization (sorted by word count desc, then length desc)
+   * Cached to avoid re-sorting on every tokenize call
+   */
+  sortedPhrases: string[];
+
+  /**
+   * Pre-filtered multi-word phrases only (for slow path in tokenizer)
+   * Excludes single-word entries for faster iteration
+   */
+  multiWordPhrases: string[];
+
+  /**
+   * Pre-computed special words for concatenated tokenization
+   * Includes minus, point, and, only, currency units, and ordinal words
+   */
+  specialWords: string[];
+
+  /**
+   * Pre-sorted words for concatenated tokenization (sorted by length desc)
+   * Combines wordToNumber keys + specialWords, sorted for longest-match
+   */
+  sortedConcatenatedWords: string[];
+
+  /**
+   * Set of 'and' words for O(1) lookup (instead of array.includes)
+   */
+  andWordsSet: Set<string>;
+
+  /**
+   * Pre-computed Set of main currency unit words for O(1) lookup
+   */
+  mainUnitSet: Set<string>;
+
+  /**
+   * Pre-computed Set of fractional currency unit words for O(1) lookup
+   */
+  fractionalUnitSet: Set<string>;
+
+  /**
+   * Pre-split multi-word main currency units (each array is the split words)
+   */
+  mainUnitMultiWord: string[][];
+
+  /**
+   * Pre-split multi-word fractional currency units
+   */
+  fractionalUnitMultiWord: string[][];
 }
 
 /**
@@ -140,6 +222,9 @@ export interface OriginalLocaleConfig {
   };
   numberWordsMapping: NumberWordMap[];
   exactWordsMapping?: NumberWordMap[];
+  ordinalWordsMapping?: NumberWordMap[];
+  ordinalExactWordsMapping?: NumberWordMap[];
+  ordinalSuffix?: string;
   namedLessThan1000?: boolean;
   splitWord?: string;
   ignoreZeroInDecimals?: boolean;

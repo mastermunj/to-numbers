@@ -1,14 +1,21 @@
 import { describe, expect, test } from 'vitest';
 import { cloneDeep } from 'lodash';
 import { ToNumbers } from '../src/ToNumbers';
-import locale from '../src/locales/np-NP';
+import npNp, { ToNumbers as LocaleToNumbers } from '../src/locales/np-NP';
 
 const localeCode = 'np-NP';
-const toNumbers = new ToNumbers({ localeCode });
+const toNumbers = new ToNumbers({
+  localeCode,
+});
 
 describe('Test Locale', () => {
   test(`Locale Class: ${localeCode}`, () => {
-    expect(toNumbers.getLocaleClass()).toBe(locale);
+    expect(toNumbers.getLocaleClass()).toBe(npNp);
+  });
+
+  test(`Per-locale ToNumbers class: ${localeCode}`, () => {
+    const localeTn = new LocaleToNumbers();
+    expect(localeTn.convert('0')).toBeDefined();
   });
 
   const wrongLocaleCode = localeCode + '-wrong';
@@ -16,55 +23,46 @@ describe('Test Locale', () => {
     const toNumbersWrongLocale = new ToNumbers({
       localeCode: wrongLocaleCode,
     });
-    expect(() => toNumbersWrongLocale.convert('एक')).toThrow(/Unknown Locale/);
+    expect(() => toNumbersWrongLocale.convert('One')).toThrow(/Unknown Locale/);
   });
 });
 
-// np-NP uses extended Indian numbering system (Lakh, Crore, Arab, Kharab)
+// Test basic numbers from locale config (0-99, 100, 1000, etc.)
+describe('Test Basic Numbers from Locale Config', () => {
+  const locale = new npNp();
+  const config = locale.config;
+
+  // Get all mappable entries from numberWordsMapping (exclude bigint values)
+  // When there are duplicate words, keep the LAST occurrence (lower number)
+  // because the tokenizer matches smaller numbers first when words are the same
+  const wordToEntry = new Map<string, { number: number; value: string }>();
+  config.numberWordsMapping
+    .filter((entry) => entry && entry.value && typeof entry.number === 'number' && entry.number <= 1e15)
+    .forEach((entry) => {
+      const lowerValue = entry.value.toLowerCase();
+      wordToEntry.set(lowerValue, entry);
+    });
+
+  const basicTests: [string, number][] = Array.from(wordToEntry.values()).map(
+    (entry) => [entry.value, entry.number] as [string, number],
+  );
+
+  test.concurrent.each(basicTests)('basic: "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+// Test data: [words, expected number]
 const testIntegers: [string, number][] = [
   ['शून्य', 0],
-  ['एक', 1],
-  ['दुई', 2],
-  ['तीन', 3],
-  ['चार', 4],
-  ['पाँच', 5],
-  ['छ', 6],
-  ['सात', 7],
-  ['आठ', 8],
-  ['नौ', 9],
-  ['दश', 10],
-  ['एघार', 11],
-  ['बाह्र', 12],
-  ['तेह्र', 13],
-  ['चौध', 14],
-  ['पन्ध्र', 15],
-  ['सोह्र', 16],
-  ['सत्र', 17],
-  ['अठार', 18],
-  ['उन्नाइस', 19],
-  ['बीस', 20],
-  ['एक्काइस', 21],
-  ['तीस', 30],
-  ['चालीस', 40],
-  ['पचास', 50],
-  ['साठी', 60],
-  ['सत्तरी', 70],
-  ['अस्सी', 80],
-  ['नब्बे', 90],
-  ['एक सय', 100],
   ['एक सय सैंतीस', 137],
-  ['दुई सय', 200],
   ['सात सय', 700],
-  ['एक हजार', 1000],
   ['एक हजार एक सय', 1100],
   ['चार हजार छ सय अस्सी', 4680],
-  ['दश हजार', 10000],
   ['त्रिसट्ठी हजार आठ सय बयान्नब्बे', 63892],
   ['छयासी हजार एक सय', 86100],
-  ['एक लाख', 100000],
   ['सात लाख बयान्नब्बे हजार पाँच सय एकासी', 792581],
   ['सत्ताइस लाख एकचालीस हजार चौँतीस', 2741034],
-  ['एक करोड', 10000000],
   ['आठ करोड चौंसट्ठी लाख उनन्तिस हजार सात सय त्रिपन्न', 86429753],
   ['सन्तानब्बे करोड त्रिपन्न लाख दश हजार आठ सय चौंसट्ठी', 975310864],
   ['नौ अर्ब सतासी करोड पैंसट्ठी लाख त्रिचालीस हजार दुई सय दश', 9876543210],
@@ -77,23 +75,97 @@ describe('Test Integers with options = {}', () => {
   });
 });
 
+describe('Test Case Insensitivity - Lowercase', () => {
+  test.concurrent.each(testIntegers)('convert lowercase "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input.toLowerCase())).toBe(expected);
+  });
+});
+
+describe('Test Case Insensitivity - Uppercase', () => {
+  test.concurrent.each(testIntegers)('convert uppercase "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input.toUpperCase())).toBe(expected);
+  });
+});
+
 describe('Test Negative Integers with options = {}', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+
   const testNegativeIntegers: [string, number][] = cloneDeep(testIntegers);
-  testNegativeIntegers.map((row, i) => {
-    if (i === 0) return;
-    row[0] = `माइनस ${row[0]}`;
+  testNegativeIntegers.forEach((row, i) => {
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
+    row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
 
-  test.concurrent.each(testNegativeIntegers)('convert "%s" => %d', (input, expected) => {
+  test.concurrent.each(testNegativeIntegers.filter((_, i) => i > 0))('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Negative Integers - Lowercase', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+
+  const testNegativeIntegers: [string, number][] = cloneDeep(testIntegers);
+  testNegativeIntegers.forEach((row, i) => {
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
+    row[0] = `${minusWord} ${row[0]}`.toLowerCase();
+    row[1] = -row[1];
+  });
+
+  test.concurrent.each(testNegativeIntegers.filter((_, i) => i > 0))('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Negative Integers - Uppercase', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+
+  const testNegativeIntegers: [string, number][] = cloneDeep(testIntegers);
+  testNegativeIntegers.forEach((row, i) => {
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
+    row[0] = `${minusWord} ${row[0]}`.toUpperCase();
+    row[1] = -row[1];
+  });
+
+  test.concurrent.each(testNegativeIntegers.filter((_, i) => i > 0))('convert "%s" => %d', (input, expected) => {
     expect(toNumbers.convert(input)).toBe(expected);
   });
 });
 
 describe('Test Integers with options = { currency: true }', () => {
+  const locale = new npNp();
+  const currency = locale.config.currency;
+  const onlyWord = locale.config.texts.only || '';
+
   const testIntegersWithCurrency: [string, number][] = cloneDeep(testIntegers);
-  testIntegersWithCurrency.map((row) => {
-    row[0] = `${row[0]} रुपैयाँ`;
+  testIntegersWithCurrency.forEach((row) => {
+    const currUnit = row[1] === 1 ? currency.singular : currency.plural;
+    const suffix = onlyWord ? ` ${currUnit} ${onlyWord}` : ` ${currUnit}`;
+    row[0] = `${row[0]}${suffix}`;
+  });
+
+  test.concurrent.each(testIntegersWithCurrency)('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input, { currency: true })).toBe(expected);
+  });
+});
+
+describe('Test Integers with options = { currency: true, doNotAddOnly: true }', () => {
+  const locale = new npNp();
+  const currency = locale.config.currency;
+
+  const testIntegersWithCurrency: [string, number][] = cloneDeep(testIntegers);
+  testIntegersWithCurrency.forEach((row) => {
+    const currUnit = row[1] === 1 ? currency.singular : currency.plural;
+    row[0] = `${row[0]} ${currUnit}`;
   });
 
   test.concurrent.each(testIntegersWithCurrency)('convert "%s" => %d', (input, expected) => {
@@ -102,13 +174,20 @@ describe('Test Integers with options = { currency: true }', () => {
 });
 
 describe('Test Negative Integers with options = { currency: true }', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+  const currency = locale.config.currency;
+  const onlyWord = locale.config.texts.only || '';
+
   const testNegativeIntegersWithCurrency: [string, number][] = cloneDeep(testIntegers);
-  testNegativeIntegersWithCurrency.map((row, i) => {
-    if (i === 0) {
-      row[0] = `${row[0]} रुपैयाँ`;
+  testNegativeIntegersWithCurrency.forEach((row, i) => {
+    const currUnit = row[1] === 1 || row[1] === -1 ? currency.singular : currency.plural;
+    const suffix = onlyWord ? ` ${currUnit} ${onlyWord}` : ` ${currUnit}`;
+    if (i === 0 || row[1] === 0) {
+      row[0] = `${row[0]}${suffix}`;
       return;
     }
-    row[0] = `माइनस ${row[0]} रुपैयाँ`;
+    row[0] = `${minusWord} ${row[0]}${suffix}`;
     row[1] = -row[1];
   });
 
@@ -117,21 +196,179 @@ describe('Test Negative Integers with options = { currency: true }', () => {
   });
 });
 
-describe('Test Additional Numbers', () => {
-  const additionalNumbers: [string, number][] = [
-    ['बाइस', 22],
-    ['तेइस', 23],
-    ['चौबीस', 24],
-    ['पच्चिस', 25],
-    ['छब्बिस', 26],
-    ['सत्ताइस', 27],
-    ['अठ्ठाइस', 28],
-    ['उनन्तिस', 29],
-    ['एकतीस', 31],
-    ['पैंतीस', 35],
-  ];
+describe('Test Negative Integers with options = { currency: true, doNotAddOnly: true }', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+  const currency = locale.config.currency;
 
-  test.concurrent.each(additionalNumbers)('convert "%s" => %d', (input, expected) => {
+  const testNegativeIntegersWithCurrency: [string, number][] = cloneDeep(testIntegers);
+  testNegativeIntegersWithCurrency.forEach((row, i) => {
+    const currUnit = row[1] === 1 || row[1] === -1 ? currency.singular : currency.plural;
+    if (i === 0 || row[1] === 0) {
+      row[0] = `${row[0]} ${currUnit}`;
+      return;
+    }
+    row[0] = `${minusWord} ${row[0]} ${currUnit}`;
+    row[1] = -row[1];
+  });
+
+  test.concurrent.each(testNegativeIntegersWithCurrency)('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input, { currency: true })).toBe(expected);
+  });
+});
+
+describe('Test Currency - Lowercase', () => {
+  const locale = new npNp();
+  const currency = locale.config.currency;
+  const onlyWord = locale.config.texts.only || '';
+
+  const testIntegersWithCurrency: [string, number][] = cloneDeep(testIntegers);
+  testIntegersWithCurrency.forEach((row) => {
+    const currUnit = row[1] === 1 ? currency.singular : currency.plural;
+    const suffix = onlyWord ? ` ${currUnit} ${onlyWord}` : ` ${currUnit}`;
+    row[0] = `${row[0]}${suffix}`.toLowerCase();
+  });
+
+  test.concurrent.each(testIntegersWithCurrency)('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input, { currency: true })).toBe(expected);
+  });
+});
+
+describe('Test Currency - Uppercase', () => {
+  const locale = new npNp();
+  const currency = locale.config.currency;
+  const onlyWord = locale.config.texts.only || '';
+
+  const testIntegersWithCurrency: [string, number][] = cloneDeep(testIntegers);
+  testIntegersWithCurrency.forEach((row) => {
+    const currUnit = row[1] === 1 ? currency.singular : currency.plural;
+    const suffix = onlyWord ? ` ${currUnit} ${onlyWord}` : ` ${currUnit}`;
+    row[0] = `${row[0]}${suffix}`.toUpperCase();
+  });
+
+  test.concurrent.each(testIntegersWithCurrency)('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input, { currency: true })).toBe(expected);
+  });
+});
+
+describe('Test Negative Currency - Lowercase', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+  const currency = locale.config.currency;
+  const onlyWord = locale.config.texts.only || '';
+
+  const testNegativeIntegersWithCurrency: [string, number][] = cloneDeep(testIntegers);
+  testNegativeIntegersWithCurrency.forEach((row, i) => {
+    const currUnit = row[1] === 1 || row[1] === -1 ? currency.singular : currency.plural;
+    const suffix = onlyWord ? ` ${currUnit} ${onlyWord}` : ` ${currUnit}`;
+    if (i === 0 || row[1] === 0) {
+      row[0] = `${row[0]}${suffix}`.toLowerCase();
+      return;
+    }
+    row[0] = `${minusWord} ${row[0]}${suffix}`.toLowerCase();
+    row[1] = -row[1];
+  });
+
+  test.concurrent.each(testNegativeIntegersWithCurrency)('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input, { currency: true })).toBe(expected);
+  });
+});
+
+const testFloats: [string, number][] = [
+  ['शून्य', 0],
+  ['शून्य दशमलब शून्य चार', 0.04],
+  ['शून्य दशमलब शून्य चार छ आठ', 0.0468],
+  ['शून्य दशमलब चार', 0.4],
+  ['शून्य दशमलब त्रिसट्ठी', 0.63],
+  ['शून्य दशमलब नौ सय त्रिहत्तर', 0.973],
+  ['शून्य दशमलब नौ सय उनान्सय', 0.999],
+  ['सैंतीस दशमलब शून्य छ', 37.06],
+  ['सैंतीस दशमलब शून्य छ आठ', 37.068],
+  ['सैंतीस दशमलब अठसट्ठी', 37.68],
+  ['सैंतीस दशमलब छ सय त्रियासी', 37.683],
+];
+
+describe('Test Floats with options = {}', () => {
+  test.concurrent.each(testFloats)('convert "%s" => %d', (input, expected) => {
     expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Floats - Lowercase', () => {
+  test.concurrent.each(testFloats)('convert lowercase "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input.toLowerCase())).toBe(expected);
+  });
+});
+
+describe('Test Floats - Uppercase', () => {
+  test.concurrent.each(testFloats)('convert uppercase "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input.toUpperCase())).toBe(expected);
+  });
+});
+
+describe('Test Negative Floats', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+
+  const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
+  testNegativeFloats.forEach((row, i) => {
+    if (i === 0 || row[1] === 0) return;
+    row[0] = `${minusWord} ${row[0]}`;
+    row[1] = -row[1];
+  });
+
+  test.concurrent.each(testNegativeFloats.filter((_, i) => i > 0))('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Negative Floats - Lowercase', () => {
+  const locale = new npNp();
+  const minusWord = locale.config.texts.minus;
+
+  const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
+  testNegativeFloats.forEach((row, i) => {
+    if (i === 0 || row[1] === 0) return;
+    row[0] = `${minusWord} ${row[0]}`.toLowerCase();
+    row[1] = -row[1];
+  });
+
+  test.concurrent.each(testNegativeFloats.filter((_, i) => i > 0))('convert "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+// Ordinal number tests
+const testOrdinals: [string, number][] = [
+  ['पहिलो', 1],
+  ['दोस्रो', 2],
+  ['तेस्रो', 3],
+  ['चौथो', 4],
+  ['पाँचौं', 5],
+  ['छैटौं', 6],
+  ['सातौं', 7],
+  ['आठौं', 8],
+  ['नवौं', 9],
+  ['दसौं', 10],
+];
+
+describe('Test Ordinal Numbers', () => {
+  test.concurrent.each(testOrdinals)('convert ordinal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+});
+
+describe('Test Ordinal Parse Result', () => {
+  test('parse returns isOrdinal true for ordinal input', () => {
+    const result = toNumbers.parse('पहिलो');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBe(true);
+    expect(result.isCurrency).toBe(false);
+  });
+
+  test('parse returns isOrdinal undefined for cardinal input', () => {
+    const result = toNumbers.parse('एक');
+    expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBeUndefined();
   });
 });

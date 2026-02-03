@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -129,5 +130,29 @@ export default class Locale implements LocaleInterface {
       { number: 0, value: 'शून्य' },
     ],
     exactWordsMapping: [{ number: 100, value: 'एक सय' }],
+    ordinalWordsMapping: [
+      { number: 100, value: 'सयौं' },
+      { number: 10, value: 'दसौं' },
+      { number: 9, value: 'नवौं' },
+      { number: 8, value: 'आठौं' },
+      { number: 7, value: 'सातौं' },
+      { number: 6, value: 'छैटौं' },
+      { number: 5, value: 'पाँचौं' },
+      { number: 4, value: 'चौथो' },
+      { number: 3, value: 'तेस्रो' },
+      { number: 2, value: 'दोस्रो' },
+      { number: 1, value: 'पहिलो' },
+    ],
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need np-NP locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

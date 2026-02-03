@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -22,6 +23,11 @@ export default class Locale implements LocaleInterface {
       point: 'દશાંશ',
     },
     numberWordsMapping: [
+      { number: 100000000000000000n, value: 'શંખ' },
+      { number: 1000000000000000n, value: 'પદ્મ' },
+      { number: 10000000000000n, value: 'નીલ' },
+      { number: 100000000000n, value: 'ખર્વ' },
+      { number: 1000000000n, value: 'અબજ' },
       { number: 10000000, value: 'કરોડ' },
       { number: 100000, value: 'લાખ' },
       { number: 1000, value: 'હજાર' },
@@ -77,7 +83,7 @@ export default class Locale implements LocaleInterface {
       { number: 51, value: 'એકાવન' },
       { number: 50, value: 'પચાસ' },
       { number: 49, value: 'ઓગણપચાસ' },
-      { number: 48, value: 'સુડતાલીસ' },
+      { number: 48, value: 'અડતાલીસ' },
       { number: 47, value: 'સુડતાલીસ' },
       { number: 46, value: 'છેતાલીસ' },
       { number: 45, value: 'પિસ્તાલીસ' },
@@ -127,5 +133,29 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'એક' },
       { number: 0, value: 'શૂન્ય' },
     ],
+    ordinalWordsMapping: [
+      { number: 100, value: 'સોમું' },
+      { number: 10, value: 'દસમું' },
+      { number: 9, value: 'નવમું' },
+      { number: 8, value: 'આઠમું' },
+      { number: 7, value: 'સાતમું' },
+      { number: 6, value: 'છઠ્ઠું' },
+      { number: 5, value: 'પાંચમું' },
+      { number: 4, value: 'ચોથું' },
+      { number: 3, value: 'ત્રીજું' },
+      { number: 2, value: 'બીજું' },
+      { number: 1, value: 'પહેલું' },
+    ],
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need gu-IN locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

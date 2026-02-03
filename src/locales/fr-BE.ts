@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -25,8 +26,10 @@ export default class Locale implements LocaleInterface {
       { number: 1000000000000, value: 'Billion' },
       { number: 1000000000, value: 'Milliard' },
       { number: 1000000, value: 'Million' },
+      { number: 1000000, value: 'Millions' },
       { number: 1000, value: 'Mille' },
       { number: 100, value: 'Cent' },
+      { number: 100, value: 'Cents' },
       { number: 99, value: 'Nonante-Neuf' },
       { number: 98, value: 'Nonante-Huit' },
       { number: 97, value: 'Nonante-Sept' },
@@ -47,6 +50,7 @@ export default class Locale implements LocaleInterface {
       { number: 82, value: 'Quatre-Vingt-Deux' },
       { number: 81, value: 'Quatre-Vingt-Un' },
       { number: 80, value: 'Quatre-Vingt' },
+      { number: 80, value: 'Quatre-Vingts' },
       { number: 79, value: 'Septante-Neuf' },
       { number: 78, value: 'Septante-Huit' },
       { number: 77, value: 'Septante-Sept' },
@@ -129,7 +133,54 @@ export default class Locale implements LocaleInterface {
       { number: 0, value: 'Zéro' },
     ],
     ignoreOneForWords: ['Cent', 'Mille'],
+    ordinalWordsMapping: [
+      { number: 1000000000000000, value: 'Billiardième' },
+      { number: 1000000000000, value: 'Billionième' },
+      { number: 1000000000, value: 'Milliardième' },
+      { number: 1000000, value: 'Millionième' },
+      { number: 1000, value: 'Millième' },
+      { number: 100, value: 'Centième' },
+      { number: 90, value: 'Nonantième' },
+      { number: 80, value: 'Quatre-Vingtième' },
+      { number: 70, value: 'Septantième' },
+      { number: 60, value: 'Soixantième' },
+      { number: 50, value: 'Cinquantième' },
+      { number: 40, value: 'Quarantième' },
+      { number: 30, value: 'Trentième' },
+      { number: 20, value: 'Vingtième' },
+      { number: 19, value: 'Dix-Neuvième' },
+      { number: 18, value: 'Dix-Huitième' },
+      { number: 17, value: 'Dix-Septième' },
+      { number: 16, value: 'Seizième' },
+      { number: 15, value: 'Quinzième' },
+      { number: 14, value: 'Quatorzième' },
+      { number: 13, value: 'Treizième' },
+      { number: 12, value: 'Douzième' },
+      { number: 11, value: 'Onzième' },
+      { number: 10, value: 'Dixième' },
+      { number: 9, value: 'Neuvième' },
+      { number: 8, value: 'Huitième' },
+      { number: 7, value: 'Septième' },
+      { number: 6, value: 'Sixième' },
+      { number: 5, value: 'Cinquième' },
+      { number: 4, value: 'Quatrième' },
+      { number: 3, value: 'Troisième' },
+      { number: 2, value: 'Deuxième' },
+      { number: 1, value: 'Premier' },
+      { number: 0, value: 'Zéroième' },
+    ],
     pluralMark: 's',
     pluralWords: ['Billiard', 'Billion', 'Milliard', 'Million'],
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need fr-BE locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }

@@ -1,4 +1,5 @@
-import { LocaleConfig, LocaleInterface } from '../types';
+import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
   public config: LocaleConfig = {
@@ -182,6 +183,24 @@ export default class Locale implements LocaleInterface {
         plural: 'تريليون',
       },
     },
+    ordinalWordsMapping: [
+      { number: 1000000000000, value: 'التريليون' },
+      { number: 1000000000, value: 'المليار' },
+      { number: 1000000, value: 'المليون' },
+      { number: 1000, value: 'الألف' },
+      { number: 100, value: 'المائة' },
+      { number: 10, value: 'العاشر' },
+      { number: 9, value: 'التاسع' },
+      { number: 8, value: 'الثامن' },
+      { number: 7, value: 'السابع' },
+      { number: 6, value: 'السادس' },
+      { number: 5, value: 'الخامس' },
+      { number: 4, value: 'الرابع' },
+      { number: 3, value: 'الثالث' },
+      { number: 2, value: 'الثاني' },
+      { number: 1, value: 'الأول' },
+      { number: 0, value: 'الصفر' },
+    ],
     paucalConfig: {
       min: 3,
       max: 10,
@@ -190,4 +209,15 @@ export default class Locale implements LocaleInterface {
     namedLessThan1000: true,
     splitWord: 'و',
   };
+}
+
+/**
+ * Per-locale ToNumbers class for tree-shaking.
+ * Use this when you only need ar-SA locale.
+ */
+export class ToNumbers extends ToNumbersCore {
+  constructor(options: ToNumbersOptions = {}) {
+    super(options);
+    this.setLocale(Locale);
+  }
 }
