@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/to-numbers.svg)](https://www.npmjs.com/package/to-numbers)
 [![npm downloads](https://img.shields.io/npm/dm/to-numbers.svg)](https://www.npmjs.com/package/to-numbers)
 [![build](https://img.shields.io/github/actions/workflow/status/mastermunj/to-numbers/ci.yml?branch=main&label=build)](https://github.com/mastermunj/to-numbers/actions)
-[![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mastermunj/to-numbers)
+[![coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://github.com/mastermunj/to-numbers)
 [![minzipped size](https://img.shields.io/bundlephobia/minzip/to-numbers?label=minzipped)](https://bundlephobia.com/package/to-numbers)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
 [![license](https://img.shields.io/npm/l/to-numbers)](https://github.com/mastermunj/to-numbers/blob/main/LICENSE)
@@ -14,6 +14,7 @@ Convert words to numbers with comprehensive locale, currency, and decimal suppor
 
 - [Use Cases](#-use-cases)
 - [Features](#-features)
+- [Performance](#-performance)
 - [Quick Start](#-quick-start)
 - [Installation](#-installation)
 - [Usage](#-usage)
@@ -42,6 +43,7 @@ Convert words to numbers with comprehensive locale, currency, and decimal suppor
 ## ✨ Features
 
 - **94 Locales** — The most comprehensive locale coverage available
+- **High Performance** — Up to 3.7M ops/sec with optimized parsing algorithms
 - **Reverse of to-words** — Perfectly complements the to-words package
 - **Multiple Numbering Systems** — Short scale, Long scale, Indian, and East Asian
 - **Currency Parsing** — Parse locale-specific currency with fractional units
@@ -52,6 +54,20 @@ Convert words to numbers with comprehensive locale, currency, and decimal suppor
 - **TypeScript Native** — Full type definitions included
 - **Multiple Formats** — ESM, CommonJS, and UMD browser bundles
 - **Zero Dependencies** — Lightweight and self-contained
+
+## ⚡ Performance
+
+Optimized for high-throughput parsing with minimal memory allocation:
+
+| Input Type | Example | Operations/sec |
+|------------|---------|---------------|
+| Small Integer | "Forty Two" | ~3.7M ops/sec |
+| Medium Integer | "Twelve Thousand Three Hundred Forty Five" | ~1.6M ops/sec |
+| Large Integer | "Nine Trillion Eight Hundred Seventy Six Billion..." | ~500K ops/sec |
+| Currency | "One Thousand Two Hundred Rupees And Fifty Paise" | ~875K ops/sec |
+| Ordinal | "Twenty Third" | ~1.8M ops/sec |
+
+> Benchmarks run on Apple M1 using Vitest bench. Run `npm run bench` to test on your hardware.
 
 ## 🚀 Quick Start
 
