@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -27,14 +27,14 @@ export default class Locale implements LocaleInterface {
       { number: 1000000000, value: 'Mil Milions' },
       { number: 1000000, value: 'Milió' },
       { number: 1000, value: 'Mil' },
-      { number: 900, value: 'Nou-Cents' },
-      { number: 800, value: 'Vuit-Cents' },
-      { number: 700, value: 'Set-Cents' },
-      { number: 600, value: 'Sis-Cents' },
-      { number: 500, value: 'Cinc-Cents' },
-      { number: 400, value: 'Quatre-Cents' },
-      { number: 300, value: 'Tres-Cents' },
-      { number: 200, value: 'Dos-Cents' },
+      { number: 900, value: 'Nou-Cents', feminineValue: 'Nou-Centes' },
+      { number: 800, value: 'Vuit-Cents', feminineValue: 'Vuit-Centes' },
+      { number: 700, value: 'Set-Cents', feminineValue: 'Set-Centes' },
+      { number: 600, value: 'Sis-Cents', feminineValue: 'Sis-Centes' },
+      { number: 500, value: 'Cinc-Cents', feminineValue: 'Cinc-Centes' },
+      { number: 400, value: 'Quatre-Cents', feminineValue: 'Quatre-Centes' },
+      { number: 300, value: 'Tres-Cents', feminineValue: 'Tres-Centes' },
+      { number: 200, value: 'Dos-Cents', feminineValue: 'Dues-Centes' },
       { number: 100, value: 'Cent' },
       { number: 90, value: 'Noranta' },
       { number: 80, value: 'Vuitanta' },
@@ -70,8 +70,8 @@ export default class Locale implements LocaleInterface {
       { number: 5, value: 'Cinc' },
       { number: 4, value: 'Quatre' },
       { number: 3, value: 'Tres' },
-      { number: 2, value: 'Dos' },
-      { number: 1, value: 'Un' },
+      { number: 2, value: 'Dos', feminineValue: 'Dues' },
+      { number: 1, value: 'Un', feminineValue: 'Una' },
       { number: 0, value: 'Zero' },
     ],
     ignoreOneForWords: [
@@ -136,6 +136,14 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'Primer' },
       { number: 0, value: 'Zero' },
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'Dècim', plural: 'Dècims' },
+      2: { singular: 'Centèsim', plural: 'Centèsims' },
+      3: { singular: 'Mil·lèsim', plural: 'Mil·lèsims' },
+      4: { singular: 'Deu-Mil·lèsim', plural: 'Deu-Mil·lèsims' },
+      5: { singular: 'Cent-Mil·lèsim', plural: 'Cent-Mil·lèsims' },
+      6: { singular: 'Milionèsim', plural: 'Milionèsims' },
+    },
   };
 }
 
@@ -153,4 +161,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

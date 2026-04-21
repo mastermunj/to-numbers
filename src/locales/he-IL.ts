@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -38,25 +38,25 @@ export default class Locale implements LocaleInterface {
       { number: 40, value: 'ארבעים' },
       { number: 30, value: 'שלושים' },
       { number: 20, value: 'עשרים' },
-      { number: 19, value: 'תשע עשרה' },
-      { number: 18, value: 'שמונה עשרה' },
-      { number: 17, value: 'שבע עשרה' },
-      { number: 16, value: 'שש עשרה' },
-      { number: 15, value: 'חמש עשרה' },
-      { number: 14, value: 'ארבע עשרה' },
-      { number: 13, value: 'שלוש עשרה' },
-      { number: 12, value: 'שתים עשרה' },
-      { number: 11, value: 'אחת עשרה' },
-      { number: 10, value: 'עשר' },
-      { number: 9, value: 'תשע' },
-      { number: 8, value: 'שמונה' },
-      { number: 7, value: 'שבע' },
-      { number: 6, value: 'שש' },
-      { number: 5, value: 'חמש' },
-      { number: 4, value: 'ארבע' },
-      { number: 3, value: 'שלוש' },
-      { number: 2, value: 'שתיים' },
-      { number: 1, value: 'אחת' },
+      { number: 19, value: 'תשע עשרה', masculineValue: 'תשעה עשר' },
+      { number: 18, value: 'שמונה עשרה', masculineValue: 'שמונה עשר' },
+      { number: 17, value: 'שבע עשרה', masculineValue: 'שבעה עשר' },
+      { number: 16, value: 'שש עשרה', masculineValue: 'שישה עשר' },
+      { number: 15, value: 'חמש עשרה', masculineValue: 'חמישה עשר' },
+      { number: 14, value: 'ארבע עשרה', masculineValue: 'ארבעה עשר' },
+      { number: 13, value: 'שלוש עשרה', masculineValue: 'שלושה עשר' },
+      { number: 12, value: 'שתים עשרה', masculineValue: 'שנים עשר' },
+      { number: 11, value: 'אחת עשרה', masculineValue: 'אחד עשר' },
+      { number: 10, value: 'עשר', masculineValue: 'עשרה' },
+      { number: 9, value: 'תשע', masculineValue: 'תשעה' },
+      { number: 8, value: 'שמונה', masculineValue: 'שמונה' },
+      { number: 7, value: 'שבע', masculineValue: 'שבעה' },
+      { number: 6, value: 'שש', masculineValue: 'שישה' },
+      { number: 5, value: 'חמש', masculineValue: 'חמישה' },
+      { number: 4, value: 'ארבע', masculineValue: 'ארבעה' },
+      { number: 3, value: 'שלוש', masculineValue: 'שלושה' },
+      { number: 2, value: 'שתיים', masculineValue: 'שניים' },
+      { number: 1, value: 'אחת', masculineValue: 'אחד' },
       { number: 0, value: 'אפס' },
     ],
     exactWordsMapping: [
@@ -105,6 +105,14 @@ export default class Locale implements LocaleInterface {
       { number: 200, value: 'המאתיים' },
       { number: 100, value: 'המאה' },
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'עשירית', plural: 'עשיריות' },
+      2: { singular: 'מאית', plural: 'מאיות' },
+      3: { singular: 'אלפית', plural: 'אלפיות' },
+      4: { singular: 'עשרת-אלפית', plural: 'עשרת-אלפיות' },
+      5: { singular: 'מאה-אלפית', plural: 'מאה-אלפיות' },
+      6: { singular: 'מיליונית', plural: 'מיליוניות' },
+    },
   };
 }
 
@@ -122,4 +130,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

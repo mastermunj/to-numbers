@@ -313,7 +313,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -329,7 +331,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -371,5 +375,27 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('ਇੱਕ');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਇੱਕ ਦਸਵਾਂ', 0.1],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਤਿੰਨ ਦਸਵੇਂ', 0.3],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਇੱਕ ਸੌਵਾਂ', 0.01],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਤਿੰਨ ਸੌਵੇਂ', 0.03],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਇੱਕ ਹਜ਼ਾਰਵਾਂ', 0.001],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਤਿੰਨ ਹਜ਼ਾਰਵੇਂ', 0.003],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਇੱਕ ਦਸ-ਹਜ਼ਾਰਵਾਂ', 0.0001],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਤਿੰਨ ਦਸ-ਹਜ਼ਾਰਵੇਂ', 0.0003],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਇੱਕ ਸੌ-ਹਜ਼ਾਰਵਾਂ', 0.00001],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਤਿੰਨ ਸੌ-ਹਜ਼ਾਰਵੇਂ', 0.00003],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਇੱਕ ਦਸ-ਲੱਖਵਾਂ', 0.000001],
+  ['ਸਿਫ਼ਰ ਦਸ਼ਮਲਵ ਤਿੰਨ ਦਸ-ਲੱਖਵੇਂ', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

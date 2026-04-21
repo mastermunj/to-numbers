@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -61,8 +61,8 @@ export default class Locale implements LocaleInterface {
       { number: 5, value: 'Пяць' },
       { number: 4, value: 'Чатыры' },
       { number: 3, value: 'Тры' },
-      { number: 2, value: 'Два' },
-      { number: 1, value: 'Адзін' },
+      { number: 2, value: 'Два', feminineValue: 'Дзве' },
+      { number: 1, value: 'Адзін', feminineValue: 'Адна' },
       { number: 0, value: 'Нуль' },
     ],
     exactWordsMapping: [{ number: 100, value: 'Сто' }],
@@ -144,6 +144,15 @@ export default class Locale implements LocaleInterface {
       'Трыльён',
       'Квадрыльён',
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'Дзясятая', plural: 'Дзясятых' },
+      2: { singular: 'Сотая', plural: 'Сотых' },
+      3: { singular: 'Тысачная', plural: 'Тысачных' },
+      4: { singular: 'Дзесяцітысачная', plural: 'Дзесяцітысачных' },
+      5: { singular: 'Статысачная', plural: 'Статысачных' },
+      6: { singular: 'Мільённая', plural: 'Мільённых' },
+    },
+    fractionSingularRule: 'slavic',
   };
 }
 
@@ -156,4 +165,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

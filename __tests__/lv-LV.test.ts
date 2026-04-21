@@ -309,7 +309,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -325,7 +327,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -366,5 +370,39 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('viens');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['nulle komats viens Desmitdaļa', 0.1],
+  ['nulle komats trīs Desmitdaļas', 0.3],
+  ['nulle komats viens Simtdaļa', 0.01],
+  ['nulle komats trīs Simtdaļas', 0.03],
+  ['nulle komats viens Tūkstošdaļa', 0.001],
+  ['nulle komats trīs Tūkstošdaļas', 0.003],
+  ['nulle komats viens Desmittūkstošdaļa', 0.0001],
+  ['nulle komats trīs Desmittūkstošdaļas', 0.0003],
+  ['nulle komats viens Simttūkstošdaļa', 0.00001],
+  ['nulle komats trīs Simttūkstošdaļas', 0.00003],
+  ['nulle komats viens Miljonsdaļa', 0.000001],
+  ['nulle komats trīs Miljonsdaļas', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['divas', 2],
+  ['viena', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

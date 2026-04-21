@@ -353,7 +353,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -369,7 +371,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -410,5 +414,39 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Jeden');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Zero Przecinek Jeden Dziesiąta', 0.1],
+  ['Zero Przecinek Trzy Dziesiąte', 0.3],
+  ['Zero Przecinek Jeden Setna', 0.01],
+  ['Zero Przecinek Trzy Setne', 0.03],
+  ['Zero Przecinek Jeden Tysiączna', 0.001],
+  ['Zero Przecinek Trzy Tysiączne', 0.003],
+  ['Zero Przecinek Jeden Dziesięciotysiączna', 0.0001],
+  ['Zero Przecinek Trzy Dziesięciotysiączne', 0.0003],
+  ['Zero Przecinek Jeden Stutysiączna', 0.00001],
+  ['Zero Przecinek Trzy Stutysiączne', 0.00003],
+  ['Zero Przecinek Jeden Milionowa', 0.000001],
+  ['Zero Przecinek Trzy Milionowe', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['Dwie', 2],
+  ['Jedna', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

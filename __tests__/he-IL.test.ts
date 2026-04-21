@@ -344,7 +344,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -360,7 +362,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -402,5 +406,55 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('אחת');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['אפס נקודה אחת עשירית', 0.1],
+  ['אפס נקודה שלוש עשיריות', 0.3],
+  ['אפס נקודה אחת מאית', 0.01],
+  ['אפס נקודה שלוש מאיות', 0.03],
+  ['אפס נקודה אחת אלפית', 0.001],
+  ['אפס נקודה שלוש אלפיות', 0.003],
+  ['אפס נקודה אחת עשרת-אלפית', 0.0001],
+  ['אפס נקודה שלוש עשרת-אלפיות', 0.0003],
+  ['אפס נקודה אחת מאה-אלפית', 0.00001],
+  ['אפס נקודה שלוש מאה-אלפיות', 0.00003],
+  ['אפס נקודה אחת מיליונית', 0.000001],
+  ['אפס נקודה שלוש מיליוניות', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['תשעה עשר', 19],
+  ['שמונה עשר', 18],
+  ['שבעה עשר', 17],
+  ['שישה עשר', 16],
+  ['חמישה עשר', 15],
+  ['ארבעה עשר', 14],
+  ['שלושה עשר', 13],
+  ['שנים עשר', 12],
+  ['אחד עשר', 11],
+  ['עשרה', 10],
+  ['תשעה', 9],
+  ['שבעה', 7],
+  ['שישה', 6],
+  ['חמישה', 5],
+  ['ארבעה', 4],
+  ['שלושה', 3],
+  ['שניים', 2],
+  ['אחד', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

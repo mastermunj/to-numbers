@@ -353,7 +353,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -369,7 +371,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -411,5 +415,27 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Një');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Zero Presje Një E Dhjeta', 0.1],
+  ['Zero Presje Tre Të Dhjeta', 0.3],
+  ['Zero Presje Një E Qindta', 0.01],
+  ['Zero Presje Tre Të Qindtat', 0.03],
+  ['Zero Presje Një E Mijëta', 0.001],
+  ['Zero Presje Tre Të Mijëtat', 0.003],
+  ['Zero Presje Një E Dhjetë Mijëta', 0.0001],
+  ['Zero Presje Tre Të Dhjetë Mijëtat', 0.0003],
+  ['Zero Presje Një E Njëqind Mijëta', 0.00001],
+  ['Zero Presje Tre Të Njëqind Mijëtat', 0.00003],
+  ['Zero Presje Një E Milionëta', 0.000001],
+  ['Zero Presje Tre Të Milionëtat', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

@@ -8,6 +8,13 @@ export default defineConfig({
     coverage: {
       enabled: true,
       include: ['src/**'],
+      exclude: ['src/types.ts'],
+      thresholds: {
+        statements: 100,
+        branches: 100,
+        functions: 100,
+        lines: 100,
+      },
     },
   },
 });

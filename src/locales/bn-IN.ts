@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -238,6 +238,14 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'প্রথম' },
       { number: 0, value: 'শূন্যতম' },
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'দশমাংশ', plural: 'দশমাংশ' },
+      2: { singular: 'শতাংশ', plural: 'শতাংশ' },
+      3: { singular: 'সহস্রাংশ', plural: 'সহস্রাংশ' },
+      4: { singular: 'দশ-সহস্রাংশ', plural: 'দশ-সহস্রাংশ' },
+      5: { singular: 'শত-সহস্রাংশ', plural: 'শত-সহস্রাংশ' },
+      6: { singular: 'দশলক্ষাংশ', plural: 'দশলক্ষাংশ' },
+    },
   };
 }
 
@@ -246,4 +254,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

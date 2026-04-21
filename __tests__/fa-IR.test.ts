@@ -307,3 +307,19 @@ describe('Test Ordinal Parse Result', () => {
     expect(result.isOrdinal).toBeUndefined();
   });
 });
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['صفر و یک دهم', 0.1],
+  ['صفر و یک صدم', 0.01],
+  ['صفر و یک هزارم', 0.001],
+  ['صفر و یک ده‌هزارم', 0.0001],
+  ['صفر و یک صدهزارم', 0.00001],
+  ['صفر و یک میلیونم', 0.000001],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});

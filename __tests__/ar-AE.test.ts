@@ -346,7 +346,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -362,7 +364,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -410,5 +414,36 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('عشرة');
     expect(result.value).toBe(10);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['تسع و تسعون', 99],
+  ['واحدة و عشرون', 21],
+  ['تسع عشرة', 19],
+  ['ثماني عشرة', 18],
+  ['سبع عشرة', 17],
+  ['ست عشرة', 16],
+  ['خمس عشرة', 15],
+  ['أربع عشرة', 14],
+  ['ثلاث عشرة', 13],
+  ['اثنتا عشرة', 12],
+  ['إحدى عشرة', 11],
+  ['عشر', 10],
+  ['تسع', 9],
+  ['ثماني', 8],
+  ['سبع', 7],
+  ['ست', 6],
+  ['خمس', 5],
+  ['أربع', 4],
+  ['ثلاث', 3],
+  ['اثنتان', 2],
+  ['واحدة', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

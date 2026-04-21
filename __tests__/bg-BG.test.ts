@@ -353,7 +353,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -369,7 +371,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -410,5 +414,36 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Едно');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Нула Цяло Едно Десетина', 0.1],
+  ['Нула Цяло Три Десетини', 0.3],
+  ['Нула Цяло Едно Стотина', 0.01],
+  ['Нула Цяло Три Стотини', 0.03],
+  ['Нула Цяло Едно Хилядна', 0.001],
+  ['Нула Цяло Три Хиляди', 0.003],
+  ['Нула Цяло Едно Десетохилядна', 0.0001],
+  ['Нула Цяло Три Десетохиляди', 0.0003],
+  ['Нула Цяло Едно Стохилядна', 0.00001],
+  ['Нула Цяло Три Стохиляди', 0.00003],
+  ['Нула Цяло Едно Милионна', 0.000001],
+  ['Нула Цяло Три Милиони', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [['Една', 1]];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

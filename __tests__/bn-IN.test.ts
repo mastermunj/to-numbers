@@ -313,7 +313,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -329,7 +331,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -371,5 +375,21 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('এক');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['শূন্য দশমিক এক দশমাংশ', 0.1],
+  ['শূন্য দশমিক এক শতাংশ', 0.01],
+  ['শূন্য দশমিক এক সহস্রাংশ', 0.001],
+  ['শূন্য দশমিক এক দশ-সহস্রাংশ', 0.0001],
+  ['শূন্য দশমিক এক শত-সহস্রাংশ', 0.00001],
+  ['শূন্য দশমিক এক দশলক্ষাংশ', 0.000001],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -26,14 +26,14 @@ export default class Locale implements LocaleInterface {
       { number: 1000000000000, value: 'Billon' },
       { number: 1000000, value: 'Millon' },
       { number: 1000, value: 'Mil' },
-      { number: 900, value: 'Novecientos' },
-      { number: 800, value: 'Ochocientos' },
-      { number: 700, value: 'Setecientos' },
-      { number: 600, value: 'Seiscientos' },
-      { number: 500, value: 'Quinientos' },
-      { number: 400, value: 'Cuatrocientos' },
-      { number: 300, value: 'Trescientos' },
-      { number: 200, value: 'Doscientos' },
+      { number: 900, value: 'Novecientos', feminineValue: 'Novecientas' },
+      { number: 800, value: 'Ochocientos', feminineValue: 'Ochocientas' },
+      { number: 700, value: 'Setecientos', feminineValue: 'Setecientas' },
+      { number: 600, value: 'Seiscientos', feminineValue: 'Seiscientas' },
+      { number: 500, value: 'Quinientos', feminineValue: 'Quinientas' },
+      { number: 400, value: 'Cuatrocientos', feminineValue: 'Cuatrocientas' },
+      { number: 300, value: 'Trescientos', feminineValue: 'Trescientas' },
+      { number: 200, value: 'Doscientos', feminineValue: 'Doscientas' },
       { number: 100, value: 'Ciento' },
       { number: 90, value: 'Noventa Y' },
       { number: 80, value: 'Ochenta Y' },
@@ -45,17 +45,17 @@ export default class Locale implements LocaleInterface {
       { number: 29, value: 'Veintinueve' },
       { number: 28, value: 'Veintiocho' },
       { number: 27, value: 'Veintisiete' },
-      { number: 26, value: 'Veintiseis' },
+      { number: 26, value: 'Veintiséis' },
       { number: 25, value: 'Veinticinco' },
       { number: 24, value: 'Veinticuatro' },
       { number: 23, value: 'Veintitrés' },
-      { number: 22, value: 'Veintidos' },
-      { number: 21, value: 'Veintiuno' },
+      { number: 22, value: 'Veintidós' },
+      { number: 21, value: 'Veintiuno', feminineValue: 'Veintiuna' },
       { number: 20, value: 'Veinte' },
       { number: 19, value: 'Diecinueve' },
       { number: 18, value: 'Dieciocho' },
-      { number: 17, value: 'Dieciciete' },
-      { number: 16, value: 'Dieciseis' },
+      { number: 17, value: 'Diecisiete' },
+      { number: 16, value: 'Dieciséis' },
       { number: 15, value: 'Quince' },
       { number: 14, value: 'Catorce' },
       { number: 13, value: 'Trece' },
@@ -70,7 +70,7 @@ export default class Locale implements LocaleInterface {
       { number: 4, value: 'Cuatro' },
       { number: 3, value: 'Tres' },
       { number: 2, value: 'Dos' },
-      { number: 1, value: 'Uno' },
+      { number: 1, value: 'Uno', feminineValue: 'Una' },
       { number: 0, value: 'Cero' },
     ],
     ignoreOneForWords: [
@@ -97,7 +97,7 @@ export default class Locale implements LocaleInterface {
       { number: 50, value: 'Cincuenta' },
       { number: 40, value: 'Cuarenta' },
       { number: 30, value: 'Treinta' },
-      { number: 1, value: ['Un', 'Uno'] },
+      { number: 1, value: ['Un', 'Uno'], feminineValue: 'Una' },
     ],
     ordinalWordsMapping: [
       { number: 1000000000000000, value: 'Trillonésimo' },
@@ -128,8 +128,8 @@ export default class Locale implements LocaleInterface {
       { number: 15, value: 'Decimoquinto' },
       { number: 14, value: 'Decimocuarto' },
       { number: 13, value: 'Decimotercero' },
-      { number: 12, value: 'Duodécimo' },
-      { number: 11, value: 'Undécimo' },
+      { number: 12, value: ['Duodécimo', 'Decimosegundo'] },
+      { number: 11, value: ['Undécimo', 'Decimoprimero'] },
       { number: 10, value: 'Décimo' },
       { number: 9, value: 'Noveno' },
       { number: 8, value: 'Octavo' },
@@ -142,6 +142,14 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'Primero' },
       { number: 0, value: 'Cero' },
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'Décimo', plural: 'Décimos' },
+      2: { singular: 'Centésimo', plural: 'Centésimos' },
+      3: { singular: 'Milésimo', plural: 'Milésimos' },
+      4: { singular: 'Diezmilésimo', plural: 'Diezmilésimos' },
+      5: { singular: 'Cienmilésimo', plural: 'Cienmilésimos' },
+      6: { singular: 'Millonésimo', plural: 'Millonésimos' },
+    },
   };
 }
 
@@ -154,4 +162,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

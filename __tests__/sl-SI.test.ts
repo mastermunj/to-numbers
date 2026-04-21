@@ -350,7 +350,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -366,7 +368,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -407,5 +411,36 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Ena');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Nič Vejica Ena Desetinka', 0.1],
+  ['Nič Vejica Tri Desetinke', 0.3],
+  ['Nič Vejica Ena Stotinka', 0.01],
+  ['Nič Vejica Tri Stotinke', 0.03],
+  ['Nič Vejica Ena Tisočinka', 0.001],
+  ['Nič Vejica Tri Tisočinke', 0.003],
+  ['Nič Vejica Ena Desetotisočinka', 0.0001],
+  ['Nič Vejica Tri Desetotisočinke', 0.0003],
+  ['Nič Vejica Ena Sto-Tisočinka', 0.00001],
+  ['Nič Vejica Tri Sto-Tisočinke', 0.00003],
+  ['Nič Vejica Ena Milijontinka', 0.000001],
+  ['Nič Vejica Tri Milijontinke', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [['Dve', 2]];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

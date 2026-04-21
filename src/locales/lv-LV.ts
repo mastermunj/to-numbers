@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -59,8 +59,8 @@ export default class Locale implements LocaleInterface {
       { number: 5, value: 'pieci' },
       { number: 4, value: 'četri' },
       { number: 3, value: 'trīs' },
-      { number: 2, value: 'divi' },
-      { number: 1, value: 'viens' },
+      { number: 2, value: 'divi', feminineValue: 'divas' },
+      { number: 1, value: 'viens', feminineValue: 'viena' },
       { number: 0, value: 'nulle' },
     ],
     ignoreOneForWords: [
@@ -109,6 +109,14 @@ export default class Locale implements LocaleInterface {
       { number: 2, value: 'Otrais' },
       { number: 1, value: 'Pirmais' },
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'Desmitdaļa', plural: 'Desmitdaļas' },
+      2: { singular: 'Simtdaļa', plural: 'Simtdaļas' },
+      3: { singular: 'Tūkstošdaļa', plural: 'Tūkstošdaļas' },
+      4: { singular: 'Desmittūkstošdaļa', plural: 'Desmittūkstošdaļas' },
+      5: { singular: 'Simttūkstošdaļa', plural: 'Simttūkstošdaļas' },
+      6: { singular: 'Miljonsdaļa', plural: 'Miljonsdaļas' },
+    },
   };
 }
 
@@ -121,4 +129,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

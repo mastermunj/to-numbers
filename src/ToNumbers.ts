@@ -17,13 +17,24 @@
  * const tn = new ToNumbers();
  */
 
-import { ConstructorOf, LocaleInterface } from './types.js';
+import { type ConstructorOf, type ConverterOptions, type LocaleInterface } from './types.js';
 import { ToNumbersCore, DefaultConverterOptions, DefaultToNumbersOptions } from './ToNumbersCore.js';
 import LOCALES from './locales/index.js';
 
 // Re-export everything from ToNumbersCore for backwards compatibility
 export { DefaultConverterOptions, DefaultToNumbersOptions };
 export { LOCALES };
+
+const instanceCache = new Map<string, ToNumbers>();
+
+function getCachedInstance(localeCode: string = DefaultToNumbersOptions.localeCode!): ToNumbers {
+  let instance = instanceCache.get(localeCode);
+  if (!instance) {
+    instance = new ToNumbers({ localeCode });
+    instanceCache.set(localeCode, instance);
+  }
+  return instance;
+}
 
 export class ToNumbers extends ToNumbersCore {
   /**
@@ -43,4 +54,16 @@ export class ToNumbers extends ToNumbersCore {
     }
     return LOCALES[localeCode];
   }
+}
+
+export function toNumbers(words: string, options?: ConverterOptions & { localeCode?: string }): number {
+  const instance = getCachedInstance(options?.localeCode);
+  const converterOptions: ConverterOptions = options
+    ? {
+        currency: options.currency,
+        currencyOptions: options.currencyOptions,
+      }
+    : {};
+
+  return instance.convert(words, converterOptions);
 }

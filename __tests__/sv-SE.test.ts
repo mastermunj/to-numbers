@@ -312,7 +312,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -328,7 +330,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -374,5 +378,27 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Ett');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Noll Komma Ett Tiondel', 0.1],
+  ['Noll Komma Tre Tiondelar', 0.3],
+  ['Noll Komma Ett Hundradel', 0.01],
+  ['Noll Komma Tre Hundradedelar', 0.03],
+  ['Noll Komma Ett Tusendel', 0.001],
+  ['Noll Komma Tre Tusendelar', 0.003],
+  ['Noll Komma Ett Tiotusendel', 0.0001],
+  ['Noll Komma Tre Tiotunsendelar', 0.0003],
+  ['Noll Komma Ett Hundratusendel', 0.00001],
+  ['Noll Komma Tre Hundratusendelar', 0.00003],
+  ['Noll Komma Ett Milliondel', 0.000001],
+  ['Noll Komma Tre Miljondelar', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

@@ -3,9 +3,10 @@
 [![npm version](https://img.shields.io/npm/v/to-numbers.svg)](https://www.npmjs.com/package/to-numbers)
 [![npm downloads](https://img.shields.io/npm/dm/to-numbers.svg)](https://www.npmjs.com/package/to-numbers)
 [![build](https://img.shields.io/github/actions/workflow/status/mastermunj/to-numbers/ci.yml?branch=main&label=build)](https://github.com/mastermunj/to-numbers/actions)
-[![coverage](https://img.shields.io/badge/coverage-96%25-brightgreen)](https://github.com/mastermunj/to-numbers)
+[![coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mastermunj/to-numbers)
 [![minzipped size](https://img.shields.io/bundlephobia/minzip/to-numbers?label=minzipped)](https://bundlephobia.com/package/to-numbers)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue)](https://www.typescriptlang.org/)
+[![node](https://img.shields.io/node/v/to-numbers)](https://www.npmjs.com/package/to-numbers)
 [![license](https://img.shields.io/npm/l/to-numbers)](https://github.com/mastermunj/to-numbers/blob/main/LICENSE)
 
 Convert words to numbers with comprehensive locale, currency, and decimal support. The reverse of the [`to-words`](https://www.npmjs.com/package/to-words) package. Ideal for parsing written amounts in invoicing, voice input, e-commerce, and financial applications.
@@ -25,6 +26,7 @@ Convert words to numbers with comprehensive locale, currency, and decimal suppor
 - [Browser Compatibility](#-browser-compatibility)
 - [Supported Locales](#%EF%B8%8F-supported-locales)
 - [Error Handling](#%EF%B8%8F-error-handling)
+- [Support](#-support)
 - [Contributing](#-contributing)
 - [FAQ](#-faq)
 - [Changelog](#-changelog)
@@ -38,16 +40,17 @@ Convert words to numbers with comprehensive locale, currency, and decimal suppor
 - **OCR Post-Processing** — Parse numbers recognized from scanned documents
 - **Chatbots & NLP** — Understand numeric inputs in natural language
 - **Accessibility** — Support users who input numbers as words
-- **Localization** — Parse numbers in 94 different languages and regions
+- **Localization** — Parse numbers in 124 languages and regions
 
 ## ✨ Features
 
-- **94 Locales** — The most comprehensive locale coverage available
-- **High Performance** — Up to 3.7M ops/sec with optimized parsing algorithms
+- **124 Locales** — The most comprehensive locale coverage available
+- **High Performance** — Optimized parsing paths with benchmark coverage for real-world inputs
 - **Reverse of to-words** — Perfectly complements the to-words package
-- **Multiple Numbering Systems** — Short scale, Long scale, Indian, and East Asian
+- **Multiple Numbering Systems** — Short scale, Long scale, Indian, East Asian, Burmese, Khmer, and scale-first ordering
 - **Currency Parsing** — Parse locale-specific currency with fractional units
-- **Ordinal Numbers** — Parse ordinals like "First", "Twenty Third", "Hundredth"
+- **Ordinal Numbers** — Parse ordinals across all 124 locales
+- **Structured Parse Metadata** — `parse()` returns flags such as `isCurrency`, `isNegative`, and `isOrdinal`
 - **Decimal Numbers** — Handle "Point" notation and fractional units
 - **Case Insensitive** — Works with any case combination
 - **Tree-Shakeable** — Import only the locales you need
@@ -57,17 +60,21 @@ Convert words to numbers with comprehensive locale, currency, and decimal suppor
 
 ## ⚡ Performance
 
-Optimized for high-throughput parsing with minimal memory allocation:
+Benchmarked on Apple M2, Node.js v24.13.0, using `vitest bench`. Throughput varies by locale and input shape, so the table below uses the current sampled-locale ranges from `bench/to-numbers.bench.ts` rather than a single headline number.
 
-| Input Type | Example | Operations/sec |
-|------------|---------|---------------|
-| Small Integer | "Forty Two" | ~3.7M ops/sec |
-| Medium Integer | "Twelve Thousand Three Hundred Forty Five" | ~1.6M ops/sec |
-| Large Integer | "Nine Trillion Eight Hundred Seventy Six Billion..." | ~500K ops/sec |
-| Currency | "One Thousand Two Hundred Rupees And Fifty Paise" | ~875K ops/sec |
-| Ordinal | "Twenty Third" | ~1.8M ops/sec |
+| Benchmark Case          | Example                                             | Throughput Range       |
+| ----------------------- | --------------------------------------------------- | ---------------------- |
+| Small Integer           | "Forty Two"                                         | ~1.1M to ~3.1M ops/sec |
+| Medium Integer          | "Twelve Thousand Three Hundred Forty Five"          | ~117K to ~1.0M ops/sec |
+| Large Integer           | "Nine Trillion Eight Hundred Seventy Six..."        | ~155K to ~567K ops/sec |
+| Currency Parsing        | "One Thousand Two Hundred Rupees And Fifty Paise"   | ~336K to ~851K ops/sec |
+| Ordinal Parsing         | "Twenty First"                                      | ~1.5M to ~4.9M ops/sec |
+| `parse()` with Metadata | `parse('Twelve Thousand Three Hundred Forty Five')` | ~508K to ~1.0M ops/sec |
+| Fraction-Style Decimal  | "Forty Five Hundredths"                             | ~1.3M ops/sec          |
+| Gendered Input          | "Veintiuna"                                         | ~3.1M ops/sec          |
+| Formal Chinese          | "玖拾"                                              | ~1.8M ops/sec          |
 
-> Benchmarks run on Apple M1 using Vitest bench. Run `npm run bench` to test on your hardware.
+Run `npm run bench` on your target hardware for current throughput.
 
 ## 🚀 Quick Start
 
@@ -80,6 +87,8 @@ toNumbers.convert('Twelve Thousand Three Hundred Forty Five');
 ```
 
 ## 📦 Installation
+
+> **Runtime requirement:** Node.js `>= 20` for Node.js and CLI usage.
 
 ### npm / yarn / pnpm
 
@@ -107,10 +116,13 @@ pnpm add to-numbers
 
 ```js
 // ESM
-import { ToNumbers } from 'to-numbers';
+import { ToNumbers, toNumbers } from 'to-numbers';
 
 // CommonJS
-const { ToNumbers } = require('to-numbers');
+const { ToNumbers, toNumbers } = require('to-numbers');
+
+// Tree-shakeable per-locale import
+import { ToNumbers as EnUsToNumbers, toNumbers as enUsToNumbers } from 'to-numbers/en-US';
 ```
 
 ### Basic Conversion
@@ -183,6 +195,52 @@ toNumbers.convert('Thirty Six Paise Only', { currency: true });
 // 0.36
 ```
 
+### Fraction-Style Decimals
+
+Locales with fraction denominator vocabularies can parse decimal phrases without digit-by-digit notation:
+
+```js
+const toNumbers = new ToNumbers({ localeCode: 'en-US' });
+
+toNumbers.convert('Forty Five Hundredths');
+// 0.45
+
+toNumbers.convert('Zero Point Three Hundredths');
+// 0.03
+```
+
+This is available across the locales that ship `fractionDenominatorMapping`, including English, Spanish, French, German, Hindi, Persian, and other fraction-style locales.
+
+### Gendered Number Forms
+
+Gender-aware locales accept the feminine or masculine forms that `to-words` emits:
+
+```js
+const spanish = new ToNumbers({ localeCode: 'es-ES' });
+
+spanish.convert('Veintiuna');
+// 21
+
+spanish.convert('Doscientas');
+// 200
+```
+
+This is especially relevant for Spanish, Portuguese, Arabic, Hebrew, and several Slavic locales.
+
+### Formal Characters
+
+Chinese financial and formal numerals are supported through the locale's formal character map:
+
+```js
+const chinese = new ToNumbers({ localeCode: 'zh-CN' });
+
+chinese.convert('玖拾');
+// 90
+
+chinese.convert('萬');
+// 10000
+```
+
 ### Custom Currency
 
 Override currency settings while keeping the locale's language:
@@ -209,17 +267,48 @@ toNumbers.convert('One Hundred Euros And Fifty Cents Only');
 // 100.50
 ```
 
+### Functional API
+
+Use the functional helper when you want a one-liner without managing a class instance:
+
+```js
+import { toNumbers } from 'to-numbers';
+
+toNumbers('One Hundred Twenty Three', { localeCode: 'en-US' });
+// 123
+
+toNumbers('One Crore');
+// 10000000 (default locale: en-IN)
+
+import { toNumbers as enUsToNumbers } from 'to-numbers/en-US';
+
+enUsToNumbers('One Hundred Twenty Three');
+// 123
+
+toNumbers('One Hundred Dollars Only', {
+  localeCode: 'en-US',
+  currency: true,
+});
+// 100
+```
+
+The root helper caches parser instances by locale code, so repeated calls do not recreate locale classes.
+Per-locale helpers such as `to-numbers/en-US` use a single cached instance and do not require `localeCode`.
+
 ### Tree-Shakeable Imports
 
 Import only the locales you need for smaller bundle sizes:
 
 ```js
-// Import specific locale directly (includes ToNumbers configured for that locale)
-import { ToNumbers } from 'to-numbers/en-US';
+// Import specific locale directly (includes both the class and functional helper)
+import { ToNumbers, toNumbers as enUsToNumbers } from 'to-numbers/en-US';
 
 const toNumbers = new ToNumbers();
 toNumbers.convert('Twelve Thousand Three Hundred Forty Five');
 // 12345
+
+enUsToNumbers('One Hundred Twenty Three');
+// 123
 ```
 
 ### Browser Usage (UMD)
@@ -243,6 +332,32 @@ toNumbers.convert('Twelve Thousand Three Hundred Forty Five');
   // 12000
 </script>
 ```
+
+## 🖥️ CLI
+
+```bash
+npx to-numbers --words "One Hundred Twenty Three" --locale en-US
+# 123
+
+npx to-numbers --words "One Hundred Dollars Only" --locale en-US --currency
+# 100
+
+npx to-numbers "Forty Five Hundredths" --locale en-US
+# 0.45
+
+npx to-numbers --help
+```
+
+Supported flags:
+
+| Flag              | Description                              |
+| ----------------- | ---------------------------------------- |
+| `--words <text>`  | Provide the text to parse explicitly     |
+| `--locale <code>` | Choose the locale, defaulting to `en-IN` |
+| `--currency`      | Parse the input as a currency amount     |
+| `-h`, `--help`    | Show help and usage examples             |
+
+You can also pass the input as positional text instead of `--words`, but not both at the same time.
 
 ## ⚛️ Framework Integration
 
@@ -272,9 +387,7 @@ import { ToNumbers } from 'to-numbers/en-US';
 const props = defineProps<{ text: string }>();
 const toNumbers = new ToNumbers();
 
-const amount = computed(() =>
-  toNumbers.convert(props.text, { currency: true })
-);
+const amount = computed(() => toNumbers.convert(props.text, { currency: true }));
 </script>
 
 <template>
@@ -305,9 +418,9 @@ export class ToNumbersPipe implements PipeTransform {
 ```svelte
 <script lang="ts">
   import { ToNumbers } from 'to-numbers/en-US';
-  
+
   export let text: string;
-  
+
   const toNumbers = new ToNumbers();
   $: amount = toNumbers.convert(text, { currency: true });
 </script>
@@ -317,18 +430,18 @@ export class ToNumbersPipe implements PipeTransform {
 
 ## 🌍 Numbering Systems
 
-Different regions use different numbering systems. This library supports all major systems:
+Different regions use different numbering systems. This library supports Western, Indian, East Asian, and locale-specific traditional groupings.
 
 ### Short Scale (Western)
 
 Used in: USA, UK, Canada, Australia, and most English-speaking countries.
 
-| Number | Name |
-|--------|------|
-| 10^6 | Million |
-| 10^9 | Billion |
-| 10^12 | Trillion |
-| 10^15 | Quadrillion |
+| Number | Name        |
+| ------ | ----------- |
+| 10^6   | Million     |
+| 10^9   | Billion     |
+| 10^12  | Trillion    |
+| 10^15  | Quadrillion |
 
 ```js
 const toNumbers = new ToNumbers({ localeCode: 'en-US' });
@@ -340,11 +453,11 @@ toNumbers.convert('One Quintillion');
 
 Used in: Germany, France, and many European countries.
 
-| Number | German | French |
-|--------|--------|--------|
-| 10^6 | Million | Million |
-| 10^9 | Milliarde | Milliard |
-| 10^12 | Billion | Billion |
+| Number | German    | French   |
+| ------ | --------- | -------- |
+| 10^6   | Million   | Million  |
+| 10^9   | Milliarde | Milliard |
+| 10^12  | Billion   | Billion  |
 
 ```js
 const toNumbers = new ToNumbers({ localeCode: 'de-DE' });
@@ -356,15 +469,15 @@ toNumbers.convert('Eins Milliarde');
 
 Used in: India, Bangladesh, Nepal, Pakistan.
 
-| Number | Name |
-|--------|------|
-| 10^5 | Lakh |
-| 10^7 | Crore |
-| 10^9 | Arab |
-| 10^11 | Kharab |
-| 10^13 | Neel |
-| 10^15 | Padma |
-| 10^17 | Shankh |
+| Number | Name   |
+| ------ | ------ |
+| 10^5   | Lakh   |
+| 10^7   | Crore  |
+| 10^9   | Arab   |
+| 10^11  | Kharab |
+| 10^13  | Neel   |
+| 10^15  | Padma  |
+| 10^17  | Shankh |
 
 ```js
 const toNumbers = new ToNumbers({ localeCode: 'en-IN' });
@@ -381,18 +494,60 @@ toNumbersHindi.convert('एक करोड़');
 
 ### East Asian System
 
-Used in: Japan, China, Korea.
+Used in: Japan, China, Taiwan, Hong Kong, and Korea.
 
-| Number | Character |
-|--------|-----------|
-| 10^4 | 万 (Man/Wan) |
-| 10^8 | 億 (Oku/Yi) |
-| 10^12 | 兆 (Chō/Zhao) |
+| Number | Character     |
+| ------ | ------------- |
+| 10^4   | 万 (Man/Wan)  |
+| 10^8   | 億 (Oku/Yi)   |
+| 10^12  | 兆 (Chō/Zhao) |
 
 ```js
-const toNumbers = new ToNumbers({ localeCode: 'ko-KR' });
-toNumbers.convert('일억');
+const toNumbers = new ToNumbers({ localeCode: 'zh-CN' });
+toNumbers.convert('一亿');
 // 100000000
+```
+
+### Burmese System
+
+Used in: Myanmar.
+
+| Number | Word   |
+| ------ | ------ |
+| 10^4   | သောင်း |
+| 10^5   | သိန်း  |
+| 10^6   | သန်း   |
+
+```js
+const toNumbers = new ToNumbers({ localeCode: 'my-MM' });
+toNumbers.convert('တစ်သိန်း');
+// 100000
+```
+
+### Khmer System
+
+Used in: Cambodia.
+
+| Number | Word |
+| ------ | ---- |
+| 10^4   | មុឺន |
+| 10^5   | សែន  |
+| 10^6   | លាន  |
+
+```js
+const toNumbers = new ToNumbers({ localeCode: 'km-KH' });
+toNumbers.convert('មួយសែន');
+// 100000
+```
+
+### Scale-First Ordering
+
+Used in: Igbo (`ig-NG`).
+
+```js
+const toNumbers = new ToNumbers({ localeCode: 'ig-NG' });
+toNumbers.convert('Puku Abụọ');
+// 2000
 ```
 
 ## ⚙️ API Reference
@@ -401,15 +556,18 @@ toNumbers.convert('일억');
 
 ```typescript
 interface ToNumbersOptions {
-  localeCode?: string;           // Default: 'en-IN'
+  localeCode?: string; // Default: 'en-IN'
   converterOptions?: {
-    currency?: boolean;          // Default: false (auto-detect when undefined)
-    currencyOptions?: {          // Override locale's currency settings
+    currency?: boolean; // Default: false
+    currencyOptions?: {
+      // Override locale's currency settings
       name: string;
+      singular: string;
       plural: string;
       symbol: string;
       fractionalUnit: {
         name: string;
+        singular: string;
         plural: string;
         symbol: string;
       };
@@ -438,139 +596,216 @@ toNumbers.convert('Fifty Dollars Only', { currency: true });
 // 50
 ```
 
+#### `parse(text, options?)`
+
+Parses words and returns metadata about the result.
+
+- **text**: `string` — The text containing number words to convert
+- **options**: `ConverterOptions` — Override instance options
+- **returns**: `ParseResult` — Numeric value plus flags such as `isCurrency`, `isNegative`, and `isOrdinal`
+
+```js
+const toNumbers = new ToNumbers({ localeCode: 'zh-CN' });
+
+toNumbers.parse('玖拾');
+// { value: 90, isCurrency: false, isNegative: false }
+```
+
+#### `toNumbers(text, options?)`
+
+Functional equivalent of `convert()` for the full bundle.
+
+- Accepts the same converter options as `convert()` plus `localeCode`
+- Uses cached instances internally
+- Defaults to `en-IN` when `localeCode` is omitted
+
 ### Converter Options
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `currency` | boolean | false | Parse as currency with locale-specific formatting |
-| `currencyOptions` | object | undefined | Override locale's default currency settings |
+| Option            | Type    | Default   | Description                                       |
+| ----------------- | ------- | --------- | ------------------------------------------------- |
+| `currency`        | boolean | false     | Parse as currency with locale-specific formatting |
+| `currencyOptions` | object  | undefined | Override locale's default currency settings       |
+
+## 🧪 Benchmarks
+
+The benchmark suite covers the common parsing paths plus newer parser features such as:
+
+- Fraction-style decimals in `en-US`
+- Gendered forms in `es-ES`
+- Formal characters in `zh-CN`
+
+Run them locally with:
+
+```bash
+npm run bench
+```
 
 ## 📏 Bundle Sizes
 
-| Import Method | Raw | Gzip |
-|--------------|-----|------|
-| Full bundle (all 94 locales) | ~500 KB | ~50 KB |
-| Single locale (en-US) | ~10 KB | ~3 KB |
-| Single locale (en-IN) | ~9 KB | ~3 KB |
+| Import Method                  | Raw       | Gzip     |
+| ------------------------------ | --------- | -------- |
+| Full bundle (all 124 locales)  | 713.93 KB | 70.41 KB |
+| Smallest locale bundle (si-LK) | 22.67 KB  | 6.32 KB  |
+| Average locale bundle          | —         | 6.77 KB  |
+| Largest locale bundle (ta-IN)  | 43.55 KB  | 7.74 KB  |
 
 > **Tip:** Use tree-shakeable imports or single-locale UMD bundles for the smallest bundle size.
 
 ## 🌐 Browser Compatibility
 
 | Browser | Version |
-|---------|--------|
-| Chrome | 49+ |
-| Firefox | 52+ |
-| Safari | 10+ |
-| Edge | 14+ |
-| Opera | 36+ |
+| ------- | ------- |
+| Chrome  | 49+     |
+| Firefox | 52+     |
+| Safari  | 10+     |
+| Edge    | 14+     |
+| Opera   | 36+     |
 
 ## 🗺️ Supported Locales
 
-All 94 locales with their features:
+All 124 locales with their currencies and numbering systems:
 
-| Locale | Language | Country | Currency | Scale |
-|--------|----------|---------|----------|-------|
-| af-ZA | Afrikaans | South Africa | Rand | Short |
-| am-ET | Amharic | Ethiopia | ብር | Short |
-| ar-AE | Arabic | UAE | درهم | Short |
-| ar-LB | Arabic | Lebanon | ليرة | Short |
-| ar-MA | Arabic | Morocco | درهم | Short |
-| ar-SA | Arabic | Saudi Arabia | ريال | Short |
-| az-AZ | Azerbaijani | Azerbaijan | Manat | Short |
-| be-BY | Belarusian | Belarus | Рубель | Short |
-| bg-BG | Bulgarian | Bulgaria | Лев | Short |
-| bn-IN | Bengali | India | টাকা | Indian |
-| ca-ES | Catalan | Spain | Euro | Short |
-| cs-CZ | Czech | Czech Republic | Koruna | Short |
-| da-DK | Danish | Denmark | Krone | Long |
-| de-DE | German | Germany | Euro | Long |
-| ee-EE | Estonian | Estonia | Euro | Short |
-| el-GR | Greek | Greece | Ευρώ | Short |
-| en-AE | English | UAE | Dirham | Short |
-| en-AU | English | Australia | Dollar | Short |
-| en-BD | English | Bangladesh | Taka | Indian |
-| en-CA | English | Canada | Dollar | Short |
-| en-GB | English | United Kingdom | Pound | Short |
-| en-GH | English | Ghana | Cedi | Short |
-| en-IE | English | Ireland | Euro | Short |
-| en-IN | English | India | Rupee | Indian |
-| en-KE | English | Kenya | Shilling | Short |
-| en-MA | English | Morocco | Dirham | Short |
-| en-MM | English | Myanmar | Kyat | Short |
-| en-MU | English | Mauritius | Rupee | Indian |
-| en-MY | English | Malaysia | Ringgit | Short |
-| en-NG | English | Nigeria | Naira | Short |
-| en-NP | English | Nepal | Rupee | Indian |
-| en-NZ | English | New Zealand | Dollar | Short |
-| en-OM | English | Oman | Rial | Short |
-| en-PH | English | Philippines | Peso | Short |
-| en-PK | English | Pakistan | Rupee | Indian |
-| en-SA | English | Saudi Arabia | Riyal | Short |
-| en-SG | English | Singapore | Dollar | Short |
-| en-US | English | USA | Dollar | Short |
-| en-ZA | English | South Africa | Rand | Short |
-| es-AR | Spanish | Argentina | Peso | Short |
-| es-ES | Spanish | Spain | Euro | Short |
-| es-MX | Spanish | Mexico | Peso | Short |
-| es-US | Spanish | USA | Dólar | Short |
-| es-VE | Spanish | Venezuela | Bolívar | Short |
-| fa-IR | Persian | Iran | تومان | Short |
-| fi-FI | Finnish | Finland | Euro | Short |
-| fil-PH | Filipino | Philippines | Piso | Short |
-| fr-BE | French | Belgium | Euro | Long |
-| fr-FR | French | France | Euro | Long |
-| fr-MA | French | Morocco | Dirham | Long |
-| fr-SA | French | Saudi Arabia | Riyal | Long |
-| gu-IN | Gujarati | India | રૂપિયો | Indian |
-| ha-NG | Hausa | Nigeria | Naira | Short |
-| hbo-IL | Biblical Hebrew | Israel | שקל | Short |
-| he-IL | Hebrew | Israel | שקל | Short |
-| hi-IN | Hindi | India | रुपया | Indian |
-| hr-HR | Croatian | Croatia | Euro | Short |
-| hu-HU | Hungarian | Hungary | Forint | Short |
-| id-ID | Indonesian | Indonesia | Rupiah | Short |
-| is-IS | Icelandic | Iceland | Króna | Short |
-| it-IT | Italian | Italy | Euro | Short |
-| ja-JP | Japanese | Japan | 円 | East Asian |
-| ka-GE | Georgian | Georgia | ლარი | Short |
-| kn-IN | Kannada | India | ರೂಪಾಯಿ | Indian |
-| ko-KR | Korean | South Korea | 원 | Short |
-| lt-LT | Lithuanian | Lithuania | Euras | Short |
-| lv-LV | Latvian | Latvia | Eiro | Short |
-| mr-IN | Marathi | India | रुपया | Indian |
-| ms-MY | Malay | Malaysia | Ringgit | Short |
-| nb-NO | Norwegian | Norway | Krone | Long |
-| nl-NL | Dutch | Netherlands | Euro | Short |
-| nl-SR | Dutch | Suriname | Dollar | Short |
-| np-NP | Nepali | Nepal | रुपैयाँ | Indian |
-| pa-IN | Punjabi | India | ਰੁਪਇਆ | Indian |
-| pl-PL | Polish | Poland | Złoty | Short |
-| pt-BR | Portuguese | Brazil | Real | Short |
-| pt-PT | Portuguese | Portugal | Euro | Short |
-| ro-RO | Romanian | Romania | Leu | Short |
-| ru-RU | Russian | Russia | Рубль | Short |
-| sk-SK | Slovak | Slovakia | Euro | Short |
-| sl-SI | Slovenian | Slovenia | Euro | Short |
-| sq-AL | Albanian | Albania | Lek | Short |
-| sr-RS | Serbian | Serbia | Dinar | Short |
-| sv-SE | Swedish | Sweden | Krona | Short |
-| sw-KE | Swahili | Kenya | Shilingi | Short |
-| ta-IN | Tamil | India | ரூபாய் | Indian |
-| te-IN | Telugu | India | రూపాయి | Indian |
-| th-TH | Thai | Thailand | บาท | Short |
-| tr-TR | Turkish | Turkey | Lira | Short |
-| uk-UA | Ukrainian | Ukraine | Гривня | Short |
-| ur-PK | Urdu | Pakistan | روپیہ | Indian |
-| vi-VN | Vietnamese | Vietnam | Đồng | Short |
-| yo-NG | Yoruba | Nigeria | Naira | Short |
-| zh-CN | Chinese | China | 元 | East Asian |
+| Locale | Language        | Country             | Currency      | Scale      |
+| ------ | --------------- | ------------------- | ------------- | ---------- |
+| af-ZA  | Afrikaans       | South Africa        | Rand          | Short      |
+| am-ET  | Amharic         | Ethiopia            | ብር            | Short      |
+| ar-AE  | Arabic          | UAE                 | درهم          | Short      |
+| ar-LB  | Arabic          | Lebanon             | ليرة          | Short      |
+| ar-MA  | Arabic          | Morocco             | درهم          | Short      |
+| ar-SA  | Arabic          | Saudi Arabia        | ريال          | Short      |
+| as-IN  | Assamese        | India               | টকা           | Indian     |
+| az-AZ  | Azerbaijani     | Azerbaijan          | Manat         | Short      |
+| be-BY  | Belarusian      | Belarus             | Рубель        | Short      |
+| bg-BG  | Bulgarian       | Bulgaria            | Лев           | Short      |
+| bn-BD  | Bengali         | Bangladesh          | টাকা          | Indian     |
+| bn-IN  | Bengali         | India               | টাকা          | Indian     |
+| ca-ES  | Catalan         | Spain               | Euro          | Short      |
+| cs-CZ  | Czech           | Czech Republic      | Koruna        | Short      |
+| da-DK  | Danish          | Denmark             | Krone         | Long       |
+| de-AT  | German          | Austria             | Euro          | Long       |
+| de-CH  | German          | Switzerland         | Franken       | Long       |
+| de-DE  | German          | Germany             | Euro          | Long       |
+| ee-EE  | Estonian        | Estonia             | Euro          | Short      |
+| el-GR  | Greek           | Greece              | Ευρώ          | Short      |
+| en-AE  | English         | UAE                 | Dirham        | Short      |
+| en-AU  | English         | Australia           | Dollar        | Short      |
+| en-BD  | English         | Bangladesh          | Taka          | Indian     |
+| en-CA  | English         | Canada              | Dollar        | Short      |
+| en-GB  | English         | United Kingdom      | Pound         | Short      |
+| en-GH  | English         | Ghana               | Cedi          | Short      |
+| en-HK  | English         | Hong Kong           | Dollar        | Short      |
+| en-IE  | English         | Ireland             | Euro          | Short      |
+| en-IN  | English         | India               | Rupee         | Indian     |
+| en-JM  | English         | Jamaica             | Dollar        | Short      |
+| en-KE  | English         | Kenya               | Shilling      | Short      |
+| en-LK  | English         | Sri Lanka           | Rupee         | Short      |
+| en-MA  | English         | Morocco             | Dirham        | Short      |
+| en-MM  | English         | Myanmar             | Kyat          | Short      |
+| en-MU  | English         | Mauritius           | Rupee         | Indian     |
+| en-MY  | English         | Malaysia            | Ringgit       | Short      |
+| en-NG  | English         | Nigeria             | Naira         | Short      |
+| en-NP  | English         | Nepal               | Rupee         | Indian     |
+| en-NZ  | English         | New Zealand         | Dollar        | Short      |
+| en-OM  | English         | Oman                | Rial          | Short      |
+| en-PH  | English         | Philippines         | Peso          | Short      |
+| en-PK  | English         | Pakistan            | Rupee         | Indian     |
+| en-SA  | English         | Saudi Arabia        | Riyal         | Short      |
+| en-SG  | English         | Singapore           | Dollar        | Short      |
+| en-TT  | English         | Trinidad and Tobago | Dollar        | Short      |
+| en-TZ  | English         | Tanzania            | Shilling      | Short      |
+| en-UG  | English         | Uganda              | Shilling      | Short      |
+| en-US  | English         | USA                 | Dollar        | Short      |
+| en-ZA  | English         | South Africa        | Rand          | Short      |
+| en-ZW  | English         | Zimbabwe            | Zimbabwe Gold | Short      |
+| es-AR  | Spanish         | Argentina           | Peso          | Short      |
+| es-CL  | Spanish         | Chile               | Peso          | Short      |
+| es-CO  | Spanish         | Colombia            | Peso          | Short      |
+| es-ES  | Spanish         | Spain               | Euro          | Short      |
+| es-MX  | Spanish         | Mexico              | Peso          | Short      |
+| es-US  | Spanish         | USA                 | Dólar         | Short      |
+| es-VE  | Spanish         | Venezuela           | Bolívar       | Short      |
+| fa-IR  | Persian         | Iran                | تومان         | Short      |
+| fi-FI  | Finnish         | Finland             | Euro          | Short      |
+| fil-PH | Filipino        | Philippines         | Piso          | Short      |
+| fr-BE  | French          | Belgium             | Euro          | Long       |
+| fr-CA  | French          | Canada              | Dollar        | Long       |
+| fr-CH  | French          | Switzerland         | Franc         | Long       |
+| fr-FR  | French          | France              | Euro          | Long       |
+| fr-MA  | French          | Morocco             | Dirham        | Long       |
+| fr-SA  | French          | Saudi Arabia        | Riyal         | Long       |
+| gu-IN  | Gujarati        | India               | રૂપિયો        | Indian     |
+| ha-NG  | Hausa           | Nigeria             | Naira         | Short      |
+| hbo-IL | Biblical Hebrew | Israel              | שקל           | Short      |
+| he-IL  | Hebrew          | Israel              | שקל           | Short      |
+| hi-IN  | Hindi           | India               | रुपया         | Indian     |
+| hr-HR  | Croatian        | Croatia             | Euro          | Short      |
+| hu-HU  | Hungarian       | Hungary             | Forint        | Short      |
+| id-ID  | Indonesian      | Indonesia           | Rupiah        | Short      |
+| ig-NG  | Igbo            | Nigeria             | Naira         | Short      |
+| is-IS  | Icelandic       | Iceland             | Króna         | Short      |
+| it-IT  | Italian         | Italy               | Euro          | Short      |
+| ja-JP  | Japanese        | Japan               | 円            | East Asian |
+| jv-ID  | Javanese        | Indonesia           | Rupiah        | Short      |
+| ka-GE  | Georgian        | Georgia             | ლარი          | Short      |
+| km-KH  | Khmer           | Cambodia            | រៀល           | Khmer      |
+| kn-IN  | Kannada         | India               | ರೂಪಾಯಿ        | Indian     |
+| ko-KR  | Korean          | South Korea         | 원            | East Asian |
+| lt-LT  | Lithuanian      | Lithuania           | Euras         | Short      |
+| lv-LV  | Latvian         | Latvia              | Eiro          | Short      |
+| ml-IN  | Malayalam       | India               | രൂപ           | Indian     |
+| mr-IN  | Marathi         | India               | रुपया         | Indian     |
+| ms-MY  | Malay           | Malaysia            | Ringgit       | Short      |
+| ms-SG  | Malay           | Singapore           | Dolar         | Short      |
+| my-MM  | Burmese         | Myanmar             | ကျပ်          | Burmese    |
+| nb-NO  | Norwegian       | Norway              | Krone         | Long       |
+| nl-NL  | Dutch           | Netherlands         | Euro          | Short      |
+| nl-SR  | Dutch           | Suriname            | Dollar        | Short      |
+| np-NP  | Nepali          | Nepal               | रुपैयाँ       | Indian     |
+| or-IN  | Odia            | India               | ଟଙ୍କା         | Indian     |
+| pa-IN  | Punjabi         | India               | ਰੁਪਇਆ         | Indian     |
+| pl-PL  | Polish          | Poland              | Złoty         | Short      |
+| pt-AO  | Portuguese      | Angola              | Kwanza        | Short      |
+| pt-BR  | Portuguese      | Brazil              | Real          | Short      |
+| pt-MZ  | Portuguese      | Mozambique          | Metical       | Short      |
+| pt-PT  | Portuguese      | Portugal            | Euro          | Short      |
+| ro-RO  | Romanian        | Romania             | Leu           | Short      |
+| ru-RU  | Russian         | Russia              | Рубль         | Short      |
+| si-LK  | Sinhala         | Sri Lanka           | රුපියල        | Indian     |
+| sk-SK  | Slovak          | Slovakia            | Euro          | Short      |
+| sl-SI  | Slovenian       | Slovenia            | Euro          | Short      |
+| sq-AL  | Albanian        | Albania             | Lek           | Short      |
+| sr-RS  | Serbian         | Serbia              | Dinar         | Short      |
+| sv-SE  | Swedish         | Sweden              | Krona         | Short      |
+| sw-KE  | Swahili         | Kenya               | Shilingi      | Short      |
+| sw-TZ  | Swahili         | Tanzania            | Shilingi      | Short      |
+| ta-IN  | Tamil           | India               | ரூபாய்        | Indian     |
+| te-IN  | Telugu          | India               | రూపాయి        | Indian     |
+| th-TH  | Thai            | Thailand            | บาท           | Short      |
+| tr-TR  | Turkish         | Turkey              | Lira          | Short      |
+| uk-UA  | Ukrainian       | Ukraine             | Гривня        | Short      |
+| ur-PK  | Urdu            | Pakistan            | روپیہ         | Indian     |
+| uz-UZ  | Uzbek           | Uzbekistan          | So'm          | Short      |
+| vi-VN  | Vietnamese      | Vietnam             | Đồng          | Short      |
+| yo-NG  | Yoruba          | Nigeria             | Naira         | Short      |
+| yue-HK | Cantonese       | Hong Kong           | 元            | East Asian |
+| zh-CN  | Chinese         | China               | 元            | East Asian |
+| zh-TW  | Chinese         | Taiwan              | 元            | East Asian |
+| zu-ZA  | Zulu            | South Africa        | Rand          | Short      |
 
 **Scale Legend:**
+
 - **Short** — Western short scale (Million, Billion, Trillion...)
 - **Long** — European long scale (Million, Milliard, Billion, Billiard...)
 - **Indian** — Indian numbering (Lakh, Crore, Arab, Kharab...)
 - **East Asian** — East Asian numbering (万, 億, 兆, 京...)
+- **Burmese** — Burmese traditional scale (သောင်း = 10k, သိန်း = 100k, သန်း = 1M)
+- **Khmer** — Khmer traditional scale (មុឺន = 10k, សែន = 100k, លាន = 1M)
+
+**Ordinal Coverage:** all 124 locales ship ordinal data, so `convert()` and `parse()` can recognise ordinal inputs without extra flags.
+
+**Formal Numerals:** `zh-CN` and `zh-TW` support formal and financial Chinese numerals (大写 / 大寫).
+
+**Scale-First Ordering:** `ig-NG` uses scale-first phrases such as `Puku Abụọ` for 2000.
 
 ## ⚠️ Error Handling
 
@@ -607,7 +842,17 @@ try {
 }
 ```
 
+## 💖 Support
+
+If `to-numbers` is useful in your work, consider supporting ongoing maintenance through [GitHub Sponsors](https://github.com/sponsors/mastermunj).
+
+After installation, `npm fund to-numbers` surfaces the same funding link from npm metadata.
+
 ## 🤝 Contributing
+
+Contributions are welcome. This project follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+For security issues, follow [SECURITY.md](SECURITY.md) and use private disclosure rather than a public issue.
 
 ### Adding a New Locale
 
@@ -652,10 +897,10 @@ const number = toNumbers.convert(words);
 No! The parser is fully case-insensitive:
 
 ```js
-toNumbers.convert('one hundred');      // 100
-toNumbers.convert('ONE HUNDRED');      // 100
-toNumbers.convert('One Hundred');      // 100
-toNumbers.convert('oNe HuNdReD');      // 100
+toNumbers.convert('one hundred'); // 100
+toNumbers.convert('ONE HUNDRED'); // 100
+toNumbers.convert('One Hundred'); // 100
+toNumbers.convert('oNe HuNdReD'); // 100
 ```
 
 </details>
@@ -710,15 +955,18 @@ See the [Contributing](#-contributing) section above. You'll need to create a lo
 <details>
 <summary><strong>What about ordinal numbers (First, Second, Third)?</strong></summary>
 
-Ordinal parsing is fully supported! The library automatically detects ordinal words:
+Ordinal parsing is available across all 124 locales in the current release. `convert()` and `parse()` automatically detect ordinal inputs, including suffix-, prefix-, and exact-form ordinals:
 
 ```js
-toNumbers.convert('First');        // 1
-toNumbers.convert('Twenty Third'); // 23
-toNumbers.convert('Hundredth');    // 100
-```
+const english = new ToNumbers({ localeCode: 'en-US' });
+english.convert('Twenty Third'); // 23
 
-Ordinal support is available for English locales. Other locales are being added progressively.
+const chinese = new ToNumbers({ localeCode: 'zh-CN' });
+chinese.convert('第三'); // 3
+
+const turkish = new ToNumbers({ localeCode: 'tr-TR' });
+turkish.convert('Birinci'); // 1
+```
 
 </details>
 

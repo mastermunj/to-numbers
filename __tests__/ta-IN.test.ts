@@ -308,7 +308,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -324,7 +326,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -366,5 +370,21 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('ஒன்று');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['பூஜ்ஜியம் புள்ளி ஒன்று தசாம்சம்', 0.1],
+  ['பூஜ்ஜியம் புள்ளி ஒன்று சதாம்சம்', 0.01],
+  ['பூஜ்ஜியம் புள்ளி ஒன்று ஆயிரத்தில் ஒரு பகுதி', 0.001],
+  ['பூஜ்ஜியம் புள்ளி ஒன்று பத்தாயிரத்தில் ஒரு பகுதி', 0.0001],
+  ['பூஜ்ஜியம் புள்ளி ஒன்று லட்சத்தில் ஒரு பகுதி', 0.00001],
+  ['பூஜ்ஜியம் புள்ளி ஒன்று பத்துலட்சத்தில் ஒரு பகுதி', 0.000001],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

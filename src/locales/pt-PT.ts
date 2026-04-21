@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -27,14 +27,14 @@ export default class Locale implements LocaleInterface {
       { number: 1000000000, value: 'Mil Milhões' },
       { number: 1000000, value: 'Milhões' },
       { number: 1000, value: 'Mil' },
-      { number: 900, value: 'Novecentos' },
-      { number: 800, value: 'Oitocentos' },
-      { number: 700, value: 'Setecentos' },
-      { number: 600, value: 'Seiscentos' },
-      { number: 500, value: 'Quinhentos' },
-      { number: 400, value: 'Quatrocentos' },
-      { number: 300, value: 'Trezentos' },
-      { number: 200, value: 'Duzentos' },
+      { number: 900, value: 'Novecentos', feminineValue: 'Novecentas' },
+      { number: 800, value: 'Oitocentos', feminineValue: 'Oitocentas' },
+      { number: 700, value: 'Setecentos', feminineValue: 'Setecentas' },
+      { number: 600, value: 'Seiscentos', feminineValue: 'Seiscentas' },
+      { number: 500, value: 'Quinhentos', feminineValue: 'Quinhentas' },
+      { number: 400, value: 'Quatrocentos', feminineValue: 'Quatrocentas' },
+      { number: 300, value: 'Trezentos', feminineValue: 'Trezentas' },
+      { number: 200, value: 'Duzentos', feminineValue: 'Duzentas' },
       { number: 100, value: 'Cento' },
       { number: 90, value: 'Noventa' },
       { number: 80, value: 'Oitenta' },
@@ -61,8 +61,8 @@ export default class Locale implements LocaleInterface {
       { number: 5, value: 'Cinco' },
       { number: 4, value: 'Quatro' },
       { number: 3, value: 'Três' },
-      { number: 2, value: 'Dois' },
-      { number: 1, value: 'Um' },
+      { number: 2, value: 'Dois', feminineValue: 'Duas' },
+      { number: 1, value: 'Um', feminineValue: 'Uma' },
       { number: 0, value: 'Zero' },
     ],
     exactWordsMapping: [
@@ -129,6 +129,14 @@ export default class Locale implements LocaleInterface {
       { number: 1, value: 'Primeiro' },
       { number: 0, value: 'Zero' },
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'Décimo', plural: 'Décimos' },
+      2: { singular: 'Centésimo', plural: 'Centésimos' },
+      3: { singular: 'Milésimo', plural: 'Milésimos' },
+      4: { singular: 'Décimo de Milésimo', plural: 'Décimos de Milésimo' },
+      5: { singular: 'Centésimo de Milésimo', plural: 'Centésimos de Milésimo' },
+      6: { singular: 'Milionésimo', plural: 'Milionésimos' },
+    },
   };
 }
 
@@ -146,4 +154,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }
