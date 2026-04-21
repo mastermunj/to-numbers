@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { ToNumbers } from '../src/ToNumbers';
+import { ToNumbers, toNumbers as toNumbersFn } from '../src/ToNumbers';
 import {
   tokenize,
   tokenizeConcatenated,
@@ -80,6 +80,11 @@ describe('ToNumbers Core Tests', () => {
       expect(result).toBe(1.5);
     });
 
+    test('should parse standalone fraction-style decimals', () => {
+      const result = toNumbers.convert('Forty Five Hundredths');
+      expect(result).toBe(0.45);
+    });
+
     test('should parse decimal with leading zeros', () => {
       const result = toNumbers.convert('One Point Zero Five');
       expect(result).toBe(1.05);
@@ -106,6 +111,37 @@ describe('ToNumbers Core Tests', () => {
       expect(toNumbers.convert('Fifty')).toBe(50);
       expect(toNumbers.convert('Twenty One')).toBe(21);
     });
+  });
+});
+
+describe('Functional API', () => {
+  test('toNumbers() converts using an explicit locale', () => {
+    expect(toNumbersFn('One Hundred Twenty Three', { localeCode: 'en-US' })).toBe(123);
+  });
+
+  test('toNumbers() uses the default locale when localeCode is omitted', () => {
+    expect(toNumbersFn('One Crore')).toBe(10000000);
+  });
+
+  test('toNumbers() passes converter options through', () => {
+    expect(toNumbersFn('Fifty Dollars Only', { localeCode: 'en-US', currency: true })).toBe(50);
+  });
+
+  test('toNumbers() matches the class-based API', () => {
+    const classInstance = new ToNumbers({ localeCode: 'en-US' });
+    expect(toNumbersFn('One Thousand Five', { localeCode: 'en-US' })).toBe(classInstance.convert('One Thousand Five'));
+  });
+
+  test('all locale entry points export ToNumbers and toNumbers', async () => {
+    const localeEntries = Object.entries(import.meta.glob('../src/locales/*.ts')).filter(
+      ([filePath]) => !filePath.endsWith('/index.ts'),
+    );
+
+    for (const [, loadModule] of localeEntries) {
+      const entry = (await loadModule()) as Record<string, unknown>;
+      expect(entry.ToNumbers).toBeDefined();
+      expect(entry.toNumbers).toBeTypeOf('function');
+    }
   });
 });
 
@@ -434,6 +470,7 @@ describe('ToNumbersCore Error Cases', () => {
 describe('ToNumbersCore Extended Coverage', () => {
   const toNumbers = new ToNumbers({ localeCode: 'en-IN' });
   const enUS = new ToNumbers({ localeCode: 'en-US' });
+  const zhCN = new ToNumbers({ localeCode: 'zh-CN' });
 
   describe('Negative Number with Decimal', () => {
     test('should parse negative decimal number', () => {
@@ -489,6 +526,14 @@ describe('ToNumbersCore Extended Coverage', () => {
     test('should return 0 for parse when all tokens are unknown', () => {
       // Edge case: unrecognized words should be ignored
       expect(toNumbers.convert('Zero')).toBe(0);
+    });
+
+    test('should preserve formal-character parsing in parse()', () => {
+      const result = zhCN.parse('玖拾');
+      expect(result.value).toBe(90);
+      expect(result.isCurrency).toBe(false);
+      expect(result.isNegative).toBe(false);
+      expect(result.isOrdinal).toBeUndefined();
     });
   });
 

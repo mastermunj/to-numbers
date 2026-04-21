@@ -306,7 +306,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -322,7 +324,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -363,5 +367,27 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Ένα');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Μηδέν Κόμμα Ένα Δέκατο', 0.1],
+  ['Μηδέν Κόμμα Τρία Δέκατα', 0.3],
+  ['Μηδέν Κόμμα Ένα Εκατοστό', 0.01],
+  ['Μηδέν Κόμμα Τρία Εκατοστά', 0.03],
+  ['Μηδέν Κόμμα Ένα Χιλιοστό', 0.001],
+  ['Μηδέν Κόμμα Τρία Χιλιοστά', 0.003],
+  ['Μηδέν Κόμμα Ένα Δεκάκις Χιλιοστό', 0.0001],
+  ['Μηδέν Κόμμα Τρία Δεκάκις Χιλιοστά', 0.0003],
+  ['Μηδέν Κόμμα Ένα Εκατοντάκις Χιλιοστό', 0.00001],
+  ['Μηδέν Κόμμα Τρία Εκατοντάκις Χιλιοστά', 0.00003],
+  ['Μηδέν Κόμμα Ένα Εκατομμυριοστό', 0.000001],
+  ['Μηδέν Κόμμα Τρία Εκατομμυριοστά', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

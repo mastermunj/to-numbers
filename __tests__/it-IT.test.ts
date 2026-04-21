@@ -392,7 +392,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -408,7 +410,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -454,5 +458,27 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Uno');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Zero Virgola Uno Decimo', 0.1],
+  ['Zero Virgola Tre Decimi', 0.3],
+  ['Zero Virgola Uno Centesimo', 0.01],
+  ['Zero Virgola Tre Centesimi', 0.03],
+  ['Zero Virgola Uno Millesimo', 0.001],
+  ['Zero Virgola Tre Millesimi', 0.003],
+  ['Zero Virgola Uno Diecimillesimo', 0.0001],
+  ['Zero Virgola Tre Diecimillesimi', 0.0003],
+  ['Zero Virgola Uno Centomillesimo', 0.00001],
+  ['Zero Virgola Tre Centomillesimi', 0.00003],
+  ['Zero Virgola Uno Milionesimo', 0.000001],
+  ['Zero Virgola Tre Milionesimi', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

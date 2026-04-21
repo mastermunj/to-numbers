@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -61,8 +61,8 @@ export default class Locale implements LocaleInterface {
       { number: 5, value: 'Pięć' },
       { number: 4, value: 'Cztery' },
       { number: 3, value: 'Trzy' },
-      { number: 2, value: 'Dwa' },
-      { number: 1, value: 'Jeden' },
+      { number: 2, value: 'Dwa', feminineValue: 'Dwie' },
+      { number: 1, value: 'Jeden', feminineValue: 'Jedna' },
       { number: 0, value: 'Zero' },
     ],
     exactWordsMapping: [{ number: 100, value: 'Sto' }],
@@ -153,6 +153,14 @@ export default class Locale implements LocaleInterface {
       { number: 0, value: 'Zerowy' },
     ],
     ordinalExactWordsMapping: [{ number: 100, value: 'Setny' }],
+    fractionDenominatorMapping: {
+      1: { singular: 'Dziesiąta', plural: 'Dziesiąte' },
+      2: { singular: 'Setna', plural: 'Setne' },
+      3: { singular: 'Tysiączna', plural: 'Tysiączne' },
+      4: { singular: 'Dziesięciotysiączna', plural: 'Dziesięciotysiączne' },
+      5: { singular: 'Stutysiączna', plural: 'Stutysiączne' },
+      6: { singular: 'Milionowa', plural: 'Milionowe' },
+    },
   };
 }
 
@@ -170,4 +178,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

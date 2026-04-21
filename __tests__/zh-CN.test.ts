@@ -315,7 +315,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -331,7 +333,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -370,6 +374,46 @@ describe('Test Ordinal Parse Result', () => {
   test('parse returns isOrdinal undefined for cardinal input', () => {
     const result = toNumbers.parse('一');
     expect(result.value).toBe(1);
+    expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Formal character tests (Phase 3 - formalConfig)
+const testFormalChars: [string, number][] = [
+  ['萬', 10000],
+  ['仟', 1000],
+  ['佰', 100],
+  ['玖拾', 90],
+  ['捌拾', 80],
+  ['柒拾', 70],
+  ['陆拾', 60],
+  ['伍拾', 50],
+  ['肆拾', 40],
+  ['叁拾', 30],
+  ['贰拾', 20],
+  ['拾', 10],
+  ['玖', 9],
+  ['捌', 8],
+  ['柒', 7],
+  ['陆', 6],
+  ['伍', 5],
+  ['肆', 4],
+  ['叁', 3],
+  ['贰', 2],
+  ['壹', 1],
+  ['零', 0],
+];
+
+describe('Test Formal Characters', () => {
+  test.concurrent.each(testFormalChars)('formal char "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
+  });
+
+  test('parse() returns the same value for formal characters', () => {
+    const result = toNumbers.parse('玖拾');
+    expect(result.value).toBe(90);
+    expect(result.isCurrency).toBe(false);
+    expect(result.isNegative).toBe(false);
     expect(result.isOrdinal).toBeUndefined();
   });
 });

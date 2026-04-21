@@ -348,7 +348,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -364,7 +366,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -405,5 +409,39 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Jedan');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Nula Zarez Jedan Desetinka', 0.1],
+  ['Nula Zarez Tri Desetinke', 0.3],
+  ['Nula Zarez Jedan Stotinka', 0.01],
+  ['Nula Zarez Tri Stotinke', 0.03],
+  ['Nula Zarez Jedan Tisućinka', 0.001],
+  ['Nula Zarez Tri Tisućinke', 0.003],
+  ['Nula Zarez Jedan Desetotisućinka', 0.0001],
+  ['Nula Zarez Tri Desetotisućinke', 0.0003],
+  ['Nula Zarez Jedan Sto-Tisućinka', 0.00001],
+  ['Nula Zarez Tri Sto-Tisućinke', 0.00003],
+  ['Nula Zarez Jedan Milijuntinka', 0.000001],
+  ['Nula Zarez Tri Milijuntinke', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['Dvije', 2],
+  ['Jedna', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

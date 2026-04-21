@@ -70,6 +70,20 @@ export type NumberWordMap = {
   number: number | bigint;
   value: string | [string, string];
   singularValue?: string;
+  feminineValue?: string;
+  masculineValue?: string;
+};
+
+/**
+ * Formal/financial character config (e.g., Chinese 大写/大寫)
+ */
+export type FormalConfig = {
+  numberWordsMapping?: NumberWordMap[];
+  exactWordsMapping?: NumberWordMap[];
+  ordinalWordsMapping?: NumberWordMap[];
+  ordinalExactWordsMapping?: NumberWordMap[];
+  currency?: CurrencyOptions;
+  ignoreOneForWords?: string[];
 };
 
 /**
@@ -148,6 +162,39 @@ export interface ParserLocaleConfig {
    */
   ordinalSuffix?: string;
 
+  /**
+   * Ordinal prefix word (e.g., Chinese "第" for ordinals like "第三")
+   */
+  ordinalPrefix?: string;
+
+  /**
+   * Formal character word-to-number map (e.g., Chinese 大写/大寫)
+   * Built from formalConfig.numberWordsMapping if present
+   */
+  formalWordToNumber?: WordNumberMap;
+
+  /**
+   * Fraction denominator map: decimal places → { singular, plural } word
+   * Used for parsing fraction-style decimals (e.g., "Forty-Five Hundredths" → 0.45)
+   */
+  fractionDenominatorMap?: Map<string, { places: number; isSingular: boolean }>;
+
+  /**
+   * Whether this locale uses scale-first word ordering (e.g., ig-NG "Puku Abụọ" = 2000)
+   */
+  scaleFirst?: boolean;
+
+  /**
+   * Whether the locale can omit the leading zero for decimals (e.g., "Point Five")
+   */
+  ignoreZeroInDecimals?: boolean;
+
+  /**
+   * Slavic fraction singular rule flag
+   * When true: use singular denominator when fractionalValue % 10 === 1 && fractionalValue % 100 !== 11
+   */
+  fractionSingularRule?: 'slavic';
+
   // ============ CACHED/PRECOMPUTED FIELDS FOR PERFORMANCE ============
 
   /**
@@ -225,13 +272,18 @@ export interface OriginalLocaleConfig {
   ordinalWordsMapping?: NumberWordMap[];
   ordinalExactWordsMapping?: NumberWordMap[];
   ordinalSuffix?: string;
+  ordinalPrefix?: string;
   namedLessThan1000?: boolean;
+  scaleFirst?: boolean;
   splitWord?: string;
   ignoreZeroInDecimals?: boolean;
   decimalLengthWordMapping?: Record<number, string>;
+  fractionDenominatorMapping?: Record<number, { singular: string; plural: string }>;
+  fractionSingularRule?: 'slavic';
   ignoreOneForWords?: string[];
   pluralMark?: string;
   pluralWords?: string[];
+  pluralWordsOnlyWhenTrailing?: string[];
   pluralForms?: Record<number, PluralFormVariants>;
   trim?: boolean;
   onlyInFront?: boolean;
@@ -240,6 +292,8 @@ export interface OriginalLocaleConfig {
     min: number;
     max: number;
   };
+  useTrailingForCurrency?: boolean;
+  formalConfig?: FormalConfig;
 }
 
 /**

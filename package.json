@@ -3,27 +3,60 @@
   "version": "1.0.0",
   "description": "Converts words (including decimal points) into numbers & currency. The reverse of to-words.",
   "keywords": [
-    "to numbers",
-    "words to numbers",
-    "words-to-numbers",
-    "words to numbers currency",
+    "convert-words",
+    "converter",
+    "currency",
+    "i18n",
     "international words to numbers",
     "international words to numbers currency",
-    "convert-words",
-    "i18n",
-    "converter",
     "number",
+    "parse",
+    "to numbers",
     "word",
-    "currency",
-    "parse"
+    "words to numbers",
+    "words to numbers currency",
+    "words-to-numbers"
   ],
+  "homepage": "https://github.com/mastermunj/to-numbers#readme",
+  "bugs": {
+    "url": "https://github.com/mastermunj/to-numbers/issues"
+  },
+  "license": "MIT",
+  "author": "Munjal Dhamecha",
   "repository": {
     "type": "git",
     "url": "https://github.com/mastermunj/to-numbers.git"
   },
-  "license": "MIT",
-  "author": "Munjal Dhamecha",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/mastermunj"
+  },
+  "bin": {
+    "to-numbers": "./dist/cjs/cli.js"
+  },
+  "files": [
+    "dist/**/*"
+  ],
   "type": "module",
+  "main": "dist/cjs/ToNumbers.js",
+  "module": "dist/esm/ToNumbers.js",
+  "browser": "dist/umd/to-numbers.min.js",
+  "types": "dist/types/ToNumbers.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "dist/types/locales/*"
+      ],
+      "types": [
+        "dist/types/types"
+      ],
+      "core": [
+        "dist/types/ToNumbersCore"
+      ]
+    }
+  },
+  "unpkg": "dist/umd/to-numbers.min.js",
+  "jsdelivr": "dist/umd/to-numbers.min.js",
   "exports": {
     ".": {
       "types": "./dist/types/ToNumbers.d.ts",
@@ -46,32 +79,11 @@
       "require": "./dist/cjs/ToNumbersCore.js"
     }
   },
-  "main": "dist/cjs/ToNumbers.js",
-  "jsdelivr": "dist/umd/to-numbers.min.js",
-  "unpkg": "dist/umd/to-numbers.min.js",
-  "module": "dist/esm/ToNumbers.js",
-  "browser": "dist/umd/to-numbers.min.js",
-  "types": "dist/types/ToNumbers.d.ts",
-  "typesVersions": {
-    "*": {
-      "*": [
-        "dist/types/locales/*"
-      ],
-      "types": [
-        "dist/types/types"
-      ],
-      "core": [
-        "dist/types/ToNumbersCore"
-      ]
-    }
-  },
-  "files": [
-    "dist/**/*"
-  ],
   "scripts": {
     "bench": "vitest bench",
-    "build": "npm run clean && npm run build:types && npm run build:cjs && npm run build:esm && npm run build:umd && npm run build:pkgjson",
+    "build": "npm run clean && npm run build:types && npm run build:cjs && npm run build:esm && npm run build:umd && npm run build:pkgjson && npm run build:cli",
     "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:cli": "chmod +x dist/cjs/cli.js",
     "build:esm": "tsc -p tsconfig.esm.json",
     "build:pkgjson": "echo '{\"type\":\"commonjs\"}' > dist/cjs/package.json",
     "build:types": "tsc -p tsconfig.json",
@@ -79,45 +91,39 @@
     "build:watch": "npm run build -- --watch",
     "clean": "rimraf dist coverage",
     "commit": "git-cz",
-    "lint": "eslint --max-warnings=0 .",
+    "format": "oxfmt --check --config ./node_modules/@mastermunj/oxc-config/.oxfmtrc.json .",
+    "format:fix": "oxfmt --write --config ./node_modules/@mastermunj/oxc-config/.oxfmtrc.json .",
+    "lint": "oxlint --type-aware .",
     "lint:fix": "npm run lint -- --fix",
     "prepare": "husky",
-    "release": "commit-and-tag-version",
-    "release:mock": "npm run release -- --dry-run",
     "test": "vitest",
     "test:watch": "npm run test -- --watch"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
+    "@mastermunj/oxc-config": "^0.0.4",
+    "@types/lodash": "^4.17.23",
+    "@types/node": "^25.2.0",
+    "@types/source-map-support": "^0.5.10",
+    "@vitest/coverage-v8": "^4.0.18",
+    "cz-conventional-changelog": "^3.3.0",
+    "esbuild": "^0.28.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "lodash": "^4.17.23",
+    "oxfmt": "^0.44.0",
+    "oxlint": "^1.57.0",
+    "oxlint-tsgolint": "^0.20.0",
+    "rimraf": "^6.1.2",
+    "source-map-support": "^0.5.21",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   },
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
     }
-  },
-  "devDependencies": {
-    "@commitlint/cli": "^20.4.1",
-    "@commitlint/config-conventional": "^20.4.1",
-    "@types/lodash": "^4.17.23",
-    "@types/node": "^25.2.0",
-    "@types/source-map-support": "^0.5.10",
-    "@typescript-eslint/eslint-plugin": "^8.54.0",
-    "@typescript-eslint/parser": "^8.54.0",
-    "@vitest/coverage-v8": "^4.0.18",
-    "commit-and-tag-version": "^12.6.1",
-    "cz-conventional-changelog": "^3.3.0",
-    "esbuild": "^0.28.0",
-    "eslint": "^9.39.2",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-import": "^2.32.0",
-    "eslint-plugin-prettier": "^5.5.5",
-    "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
-    "lodash": "^4.17.23",
-    "prettier": "^3.8.1",
-    "rimraf": "^6.1.2",
-    "sort-package-json": "^3.6.1",
-    "source-map-support": "^0.5.21",
-    "to-words": "^5.0.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
   },
   "engines": {
     "node": ">=20.0.0"

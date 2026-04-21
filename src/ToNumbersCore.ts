@@ -18,12 +18,12 @@
  */
 
 import {
-  ConverterOptions,
-  ToNumbersOptions,
-  ParseResult,
-  ParserLocaleConfig,
-  LocaleInterface,
-  ConstructorOf,
+  type ConverterOptions,
+  type ToNumbersOptions,
+  type ParseResult,
+  type ParserLocaleConfig,
+  type LocaleInterface,
+  type ConstructorOf,
 } from './types.js';
 import { tokenize, tokenizeConcatenated, cleanInput } from './tokenizer.js';
 import { buildParserLocaleConfig } from './localeAdapter.js';
@@ -38,7 +38,9 @@ export const DefaultToNumbersOptions: ToNumbersOptions = {
 };
 
 export class ToNumbersCore {
-  protected options: ToNumbersOptions = {};
+  protected options: ToNumbersOptions & { converterOptions: ConverterOptions } = {
+    converterOptions: DefaultConverterOptions,
+  };
 
   protected locale: InstanceType<ConstructorOf<LocaleInterface>> | undefined = undefined;
 
@@ -47,7 +49,9 @@ export class ToNumbersCore {
   protected parserConfig: ParserLocaleConfig | undefined = undefined;
 
   constructor(options: ToNumbersOptions = {}) {
-    this.options = Object.assign({}, DefaultToNumbersOptions, options);
+    this.options = Object.assign({}, DefaultToNumbersOptions, options, {
+      converterOptions: options.converterOptions ?? DefaultConverterOptions,
+    });
   }
 
   /**
@@ -120,6 +124,23 @@ export class ToNumbersCore {
   }
 
   /**
+   * Tokenize using the formal word map (for Chinese 大写/大寫).
+   * Falls back to null if no formalWordToNumber is configured.
+   */
+  protected getFormalTokens(words: string): string[] | null {
+    const config = this.getParserConfig();
+    if (!config.formalWordToNumber || config.formalWordToNumber.size === 0) {
+      return null;
+    }
+    const cleaned = cleanInput(words);
+    return tokenize(cleaned, {
+      caseSensitive: config.caseSensitive,
+      wordMap: config.formalWordToNumber,
+      sortedPhrases: [],
+    });
+  }
+
+  /**
    * Convert words to a number
    * Optimized: tokenizes once and reuses tokens for ordinal check and number parsing
    */
@@ -128,7 +149,7 @@ export class ToNumbersCore {
     const hasCustomOptions = options.currency !== undefined || options.currencyOptions !== undefined;
     const mergedOptions = hasCustomOptions
       ? Object.assign({}, this.options.converterOptions, options)
-      : this.options.converterOptions || options;
+      : this.options.converterOptions;
 
     if (!this.isValidInput(words)) {
       throw new Error(`Invalid Input "${words}"`);
@@ -144,6 +165,11 @@ export class ToNumbersCore {
     const tokens = this.getTokens(words);
 
     if (tokens.length === 0) {
+      // Try formal tokenization (e.g., Chinese 大写)
+      const formalTokens = this.getFormalTokens(words);
+      if (formalTokens && formalTokens.length > 0) {
+        return this.parseNumberFromFormalTokens(formalTokens, config);
+      }
       return 0;
     }
 
@@ -154,7 +180,20 @@ export class ToNumbersCore {
     }
 
     // Parse as regular number using pre-tokenized tokens
-    return this.parseNumberFromTokens(tokens, config);
+    const result = this.parseNumberFromTokens(tokens, config);
+
+    // If result is 0 and we got tokens, try formal parsing as fallback
+    if (result === 0 && config.formalWordToNumber) {
+      const formalTokens = this.getFormalTokens(words);
+      if (formalTokens && formalTokens.length > 0) {
+        const formalResult = this.parseNumberFromFormalTokens(formalTokens, config);
+        if (formalResult !== 0) {
+          return formalResult;
+        }
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -166,7 +205,7 @@ export class ToNumbersCore {
     const hasCustomOptions = options.currency !== undefined || options.currencyOptions !== undefined;
     const mergedOptions = hasCustomOptions
       ? Object.assign({}, this.options.converterOptions, options)
-      : this.options.converterOptions || options;
+      : this.options.converterOptions;
 
     if (!this.isValidInput(words)) {
       throw new Error(`Invalid Input "${words}"`);
@@ -181,6 +220,16 @@ export class ToNumbersCore {
     const tokens = this.getTokens(words);
 
     if (tokens.length === 0) {
+      const formalTokens = this.getFormalTokens(words);
+      if (formalTokens && formalTokens.length > 0) {
+        const value = this.parseNumberFromFormalTokens(formalTokens, config);
+        return {
+          value,
+          isCurrency: false,
+          isNegative: value < 0,
+        };
+      }
+
       return {
         value: 0,
         isCurrency: false,
@@ -201,6 +250,19 @@ export class ToNumbersCore {
 
     // Parse as regular number using pre-tokenized tokens
     const value = this.parseNumberFromTokens(tokens, config);
+
+    if (value === 0 && config.formalWordToNumber) {
+      const formalTokens = this.getFormalTokens(words);
+      if (formalTokens && formalTokens.length > 0) {
+        const formalValue = this.parseNumberFromFormalTokens(formalTokens, config);
+        return {
+          value: formalValue,
+          isCurrency: false,
+          isNegative: formalValue < 0,
+        };
+      }
+    }
+
     return {
       value,
       isCurrency: false,
@@ -227,11 +289,9 @@ export class ToNumbersCore {
     }
 
     // Check for negative indicator
-    let isNegative = false;
     let startIndex = 0;
 
     if (config.texts.minus.includes(tokens[0])) {
-      isNegative = true;
       startIndex = 1;
     }
 
@@ -241,8 +301,15 @@ export class ToNumbersCore {
       const pointIndex = this.findPointIndexInRange(tokens, 0, tokens.length, config);
 
       if (pointIndex === -1) {
+        const fractionResult = this.tryParseFractionDecimal(tokens, config);
+        if (fractionResult !== null) {
+          return this.combineIntegerAndDecimal(0, fractionResult.value, fractionResult.places);
+        }
+
         // No decimal point, parse entire array as integer
-        const result = this.parseIntegerTokens(tokens, config);
+        const result = config.scaleFirst
+          ? this.parseIntegerScaleFirst(tokens, config)
+          : this.parseIntegerTokens(tokens, config);
         return result;
       }
 
@@ -250,7 +317,12 @@ export class ToNumbersCore {
       const integerTokens = tokens.slice(0, pointIndex);
       const decimalTokens = tokens.slice(pointIndex + 1);
 
-      const integerPart = integerTokens.length > 0 ? this.parseIntegerTokens(integerTokens, config) : 0;
+      const integerPart =
+        integerTokens.length > 0
+          ? config.scaleFirst
+            ? this.parseIntegerScaleFirst(integerTokens, config)
+            : this.parseIntegerTokens(integerTokens, config)
+          : 0;
       const decimalResult = this.parseDecimalTokens(decimalTokens, config);
 
       if (decimalResult.places > 0) {
@@ -270,14 +342,27 @@ export class ToNumbersCore {
     let decimalPlaces = 0;
 
     if (pointIndex === -1) {
+      const fractionResult = this.tryParseFractionDecimal(numberTokens, config);
+      if (fractionResult !== null) {
+        const result = this.combineIntegerAndDecimal(0, fractionResult.value, fractionResult.places);
+        return -result;
+      }
+
       // No decimal point, parse as integer
-      integerPart = this.parseIntegerTokens(numberTokens, config);
+      integerPart = config.scaleFirst
+        ? this.parseIntegerScaleFirst(numberTokens, config)
+        : this.parseIntegerTokens(numberTokens, config);
     } else {
       // Parse integer and decimal parts
       const integerTokens = numberTokens.slice(0, pointIndex);
       const decimalTokens = numberTokens.slice(pointIndex + 1);
 
-      integerPart = integerTokens.length > 0 ? this.parseIntegerTokens(integerTokens, config) : 0;
+      integerPart =
+        integerTokens.length > 0
+          ? config.scaleFirst
+            ? this.parseIntegerScaleFirst(integerTokens, config)
+            : this.parseIntegerTokens(integerTokens, config)
+          : 0;
       const decimalResult = this.parseDecimalTokens(decimalTokens, config);
       decimalPart = decimalResult.value;
       decimalPlaces = decimalResult.places;
@@ -288,7 +373,199 @@ export class ToNumbersCore {
       result = this.combineIntegerAndDecimal(integerPart, decimalPart, decimalPlaces);
     }
 
-    return isNegative ? -result : result;
+    return -result;
+  }
+
+  /**
+   * Parse integer tokens for scale-first locales (e.g., ig-NG).
+   * In scale-first order the scale word precedes its coefficient:
+   *   "Puku Abụọ" = Thousand × 2 = 2000
+   *   "Puku Abụọ Na Ise" = (1000 × 2) + 5 = 2005
+   * Algorithm: iterate tokens; when a scale word is found, multiply it by what immediately follows.
+   */
+  protected parseIntegerScaleFirst(tokens: string[], config: ParserLocaleConfig): number {
+    if (tokens.length === 0) {
+      return 0;
+    }
+
+    let result = 0;
+    let index = 0;
+
+    while (index < tokens.length) {
+      const token = tokens[index];
+
+      if (config.andWordsSet.has(token)) {
+        index++;
+        continue;
+      }
+
+      const num = config.wordToNumber.get(token);
+
+      if (num === undefined) {
+        index++;
+        continue;
+      }
+
+      if (config.scaleWords.has(num)) {
+        if (index + 1 < tokens.length && config.andWordsSet.has(tokens[index + 1])) {
+          result += num;
+          index += 2;
+          continue;
+        }
+
+        const coefficientStart = this.findNextScaleFirstValueIndex(tokens, index + 1, config);
+        if (coefficientStart >= tokens.length) {
+          result += num;
+          break;
+        }
+
+        const coefficientRange = this.findScaleFirstCoefficientRange(tokens, coefficientStart, config);
+        const coefficient =
+          coefficientRange.end > coefficientStart
+            ? this.parseScaleFirstAdditiveGroup(tokens, coefficientStart, coefficientRange.end, config)
+            : 1;
+
+        result += num * coefficient;
+        index = coefficientRange.end;
+        continue;
+      }
+
+      const additiveRange = this.findScaleFirstAdditiveRange(tokens, index, config);
+      result += this.parseScaleFirstAdditiveGroup(tokens, index, additiveRange.end, config);
+      index = additiveRange.end;
+    }
+
+    return result;
+  }
+
+  /**
+   * Find the next non-connector token index in a scale-first locale.
+   */
+  protected findNextScaleFirstValueIndex(tokens: string[], start: number, config: ParserLocaleConfig): number {
+    let index = start;
+
+    while (index < tokens.length && config.andWordsSet.has(tokens[index])) {
+      index++;
+    }
+
+    return index;
+  }
+
+  /**
+   * Find the coefficient range that follows a scale word in a scale-first locale.
+   * The coefficient is the longest descending additive group before the next scale group
+   * or before the numeric magnitude would increase again.
+   */
+  protected findScaleFirstCoefficientRange(
+    tokens: string[],
+    start: number,
+    config: ParserLocaleConfig,
+  ): { end: number } {
+    let end = start;
+    let previousValue = Number.POSITIVE_INFINITY;
+
+    while (end < tokens.length) {
+      const token = tokens[end];
+
+      if (config.andWordsSet.has(token)) {
+        end++;
+        continue;
+      }
+
+      const num = config.wordToNumber.get(token);
+
+      if (num === undefined) {
+        end++;
+        continue;
+      }
+
+      if (config.scaleWords.has(num)) {
+        break;
+      }
+
+      if (num > previousValue) {
+        break;
+      }
+
+      previousValue = num;
+      end++;
+    }
+
+    return { end };
+  }
+
+  /**
+   * Find a descending additive group in a scale-first locale.
+   */
+  protected findScaleFirstAdditiveRange(tokens: string[], start: number, config: ParserLocaleConfig): { end: number } {
+    let end = start;
+    let previousValue = Number.POSITIVE_INFINITY;
+
+    while (end < tokens.length) {
+      if (config.andWordsSet.has(tokens[end])) {
+        end++;
+        continue;
+      }
+
+      const num = config.wordToNumber.get(tokens[end]);
+
+      if (num === undefined) {
+        end++;
+        continue;
+      }
+
+      if (config.scaleWords.has(num) || num > previousValue) {
+        break;
+      }
+
+      previousValue = num;
+      end++;
+    }
+
+    return { end };
+  }
+
+  /**
+   * Sum a simple additive group for a scale-first locale.
+   */
+  protected parseScaleFirstAdditiveGroup(
+    tokens: string[],
+    start: number,
+    end: number,
+    config: ParserLocaleConfig,
+  ): number {
+    let sum = 0;
+
+    for (let i = start; i < end; i++) {
+      if (config.andWordsSet.has(tokens[i])) {
+        continue;
+      }
+
+      const num = config.wordToNumber.get(tokens[i]);
+      if (num !== undefined && !config.scaleWords.has(num)) {
+        sum += num;
+      }
+    }
+
+    return sum;
+  }
+
+  /**
+   * Parse formal-character tokens (e.g., Chinese 大写/大寫).
+   * Uses the formalWordToNumber map instead of the normal wordToNumber.
+   */
+  protected parseNumberFromFormalTokens(formalTokens: string[], config: ParserLocaleConfig): number {
+    if (!config.formalWordToNumber || formalTokens.length === 0) {
+      return 0;
+    }
+
+    // Build a temporary config that swaps in the formal map
+    const formalConfig: ParserLocaleConfig = {
+      ...config,
+      wordToNumber: config.formalWordToNumber,
+    };
+
+    return this.parseIntegerTokens(formalTokens, formalConfig);
   }
 
   /**
@@ -303,6 +580,15 @@ export class ToNumbersCore {
       return null;
     }
 
+    // If the input contains a decimal point word, it's a decimal expression – not an ordinal
+    if (config.texts.point.length > 0) {
+      for (const token of tokens) {
+        if (config.texts.point.includes(token)) {
+          return null;
+        }
+      }
+    }
+
     // For short inputs (≤4 tokens), check full phrase first
     // Multi-word ordinals like "one hundredth" are typically 2-3 words max
     if (tokens.length <= 4) {
@@ -311,6 +597,17 @@ export class ToNumbersCore {
       if (exactMatch !== undefined) {
         return { isOrdinal: true, ordinalTokenIndex: 0, ordinalValue: exactMatch };
       }
+    }
+
+    // Handle ordinalPrefix (e.g., Chinese "第" as first token)
+    if (config.ordinalPrefix && tokens[0] === config.ordinalPrefix) {
+      const withoutPrefix = tokens.slice(1);
+      if (withoutPrefix.length === 0) {
+        return null;
+      }
+      // Treat the remainder as a cardinal number — we'll return it as ordinal in
+      // parseOrdinalFromTokens
+      return { isOrdinal: true, ordinalTokenIndex: -1 /* sentinel */, ordinalValue: 0 };
     }
 
     // Check the last token for ordinal word
@@ -368,6 +665,17 @@ export class ToNumbersCore {
       return null;
     }
 
+    // ordinalTokenIndex === -1 is the sentinel for ordinalPrefix case
+    if (ordinalInfo.ordinalTokenIndex === -1) {
+      // Strip the prefix token and parse the remainder as a cardinal number
+      const remainder = numberTokens.slice(1);
+      /* v8 ignore next -- defensive guard after ordinal-prefix detection */
+      if (remainder.length === 0) {
+        return null;
+      }
+      return this.parseIntegerTokens(remainder, config);
+    }
+
     // If only ordinal token (e.g., "First", "Second")
     if (ordinalInfo.ordinalTokenIndex === 0 && numberTokens.length === 1) {
       return ordinalInfo.ordinalValue;
@@ -382,10 +690,6 @@ export class ToNumbersCore {
     // Composite ordinal: "Twenty Third" → "Twenty" (cardinal) + "Third" (ordinal)
     // Parse the cardinal part (all tokens before the ordinal)
     const cardinalTokens = numberTokens.slice(0, ordinalInfo.ordinalTokenIndex);
-    if (cardinalTokens.length === 0) {
-      return ordinalInfo.ordinalValue;
-    }
-
     const cardinalPart = this.parseIntegerTokens(cardinalTokens, config);
     return cardinalPart + ordinalInfo.ordinalValue;
   }
@@ -476,6 +780,7 @@ export class ToNumbersCore {
     } else if (mainUnitMatch === null && fractionalUnitMatch !== null) {
       // Only fractional unit
       fractionalAmount = this.parseIntegerTokensInRange(tokens, tokenStart, fractionalUnitMatch.startIndex, config);
+      /* v8 ignore start -- all currency-unit combinations are covered; V8 still attributes a synthetic branch here */
     } else if (mainUnitMatch !== null && fractionalUnitMatch !== null) {
       // Both units present
       mainAmount = this.parseIntegerTokensInRange(tokens, tokenStart, mainUnitMatch.startIndex, config);
@@ -493,6 +798,7 @@ export class ToNumbersCore {
         config,
       );
     }
+    /* v8 ignore stop */
 
     // Combine main and fractional amounts (always 2 decimal places for currency)
     const value = mainAmount + fractionalAmount / 100;
@@ -553,6 +859,10 @@ export class ToNumbersCore {
   ): number {
     if (start >= end) {
       return 0;
+    }
+
+    if (config.scaleFirst) {
+      return this.parseIntegerScaleFirst(tokens.slice(start, end), config);
     }
 
     // Fast path: filter "and" words and collect scale positions in one pass
@@ -664,7 +974,6 @@ export class ToNumbersCore {
 
     // Has "and" words - need to filter them out first
     // Single pass: collect scale word positions AND filter tokens simultaneously
-    let highestScaleValue = 0;
     let effectiveLength = 0;
 
     const scalePositions: Array<{ filteredIndex: number; value: number; token: string }> = [];
@@ -677,9 +986,6 @@ export class ToNumbersCore {
       const num = config.wordToNumber.get(token);
       if (num !== undefined && config.scaleWords.has(num)) {
         scalePositions.push({ filteredIndex: effectiveLength, value: num, token });
-        if (num > highestScaleValue) {
-          highestScaleValue = num;
-        }
       }
       effectiveLength++;
     }
@@ -705,7 +1011,8 @@ export class ToNumbersCore {
     }
 
     // Build filtered array for locales with "and" words
-    const filteredTokens: string[] = new Array(effectiveLength);
+    const filteredTokens: string[] = [];
+    filteredTokens.length = effectiveLength;
     let filteredIdx = 0;
     for (let i = 0; i < tokens.length; i++) {
       const token = tokens[i];
@@ -1023,14 +1330,74 @@ export class ToNumbersCore {
         }
       }
       const places = decimalStr.length;
-      const value = parseInt(decimalStr, 10) || 0;
+      const value = Number.parseInt(decimalStr, 10) || 0;
       return { value, places };
+    }
+
+    // ---- Fraction-style decimal: "Forty Five Hundredths" → 0.45 ----
+    if (config.fractionDenominatorMap && config.fractionDenominatorMap.size > 0) {
+      const fractionResult = this.tryParseFractionDecimal(tokens, config, true);
+      if (fractionResult !== null) {
+        return fractionResult;
+      }
     }
 
     // Parse as a regular number (e.g., "sixty three" => 63)
     const value = this.parseIntegerTokens(tokens, config);
     const places = value === 0 ? 0 : Math.floor(Math.log10(value)) + 1;
     return { value, places };
+  }
+
+  /**
+   * Try to parse fraction-style decimal tokens (e.g., ["forty", "five", "hundredths"])
+   * Returns { value, places } if the last token is a recognised denominator word, null otherwise.
+   */
+  protected tryParseFractionDecimal(
+    tokens: string[],
+    config: ParserLocaleConfig,
+    allowAmbiguousScaleDenominator: boolean = false,
+  ): { value: number; places: number } | null {
+    if (!config.fractionDenominatorMap || tokens.length === 0) {
+      return null;
+    }
+
+    // Check last 1, 2, or 3 tokens as the denominator key (supports multi-word denominators)
+    // Iterate longest-first so a 3-word denominator beats a 1-word suffix match
+    const maxKeyLen = Math.min(3, tokens.length);
+    for (let keyLen = maxKeyLen; keyLen >= 1; keyLen--) {
+      const denominatorKey = tokens.slice(tokens.length - keyLen).join(' ');
+      const denomInfo = config.fractionDenominatorMap.get(denominatorKey);
+      if (!denomInfo) {
+        continue;
+      }
+
+      const denominatorNumber = config.wordToNumber.get(denominatorKey);
+      if (
+        !allowAmbiguousScaleDenominator &&
+        denominatorNumber !== undefined &&
+        config.scaleWords.has(denominatorNumber)
+      ) {
+        continue;
+      }
+
+      const { places } = denomInfo;
+      const numeratorTokens = tokens.slice(0, tokens.length - keyLen);
+
+      // Strip any leading 'and' from the numerator (some locales include it)
+      let numStart = 0;
+      if (numeratorTokens.length > 0 && config.andWordsSet.has(numeratorTokens[0])) {
+        numStart = 1;
+      }
+
+      let numerator = 0;
+      if (numeratorTokens.length - numStart > 0) {
+        numerator = this.parseIntegerTokens(numeratorTokens.slice(numStart), config);
+      }
+
+      return { value: numerator, places };
+    }
+
+    return null;
   }
 
   /**
@@ -1063,10 +1430,39 @@ export class ToNumbersCore {
    * Optimized version that works on a range without creating new arrays
    */
   protected findPointIndexInRange(tokens: string[], start: number, end: number, config: ParserLocaleConfig): number {
-    // If point and 'and' words are the same, we can't reliably distinguish them
+    // If point and 'and' words are the same, we can't reliably distinguish them in general.
+    // However, when a fractionDenominatorMap is present, the 'and/point' word can serve as a
+    // decimal separator when followed by a fraction denominator expression.
     const pointWord = config.texts.point[0];
     const andWord = config.texts.and[0];
     if (pointWord && andWord && pointWord === andWord) {
+      if (config.ignoreZeroInDecimals) {
+        for (let i = start; i < end; i++) {
+          if (config.texts.point.includes(tokens[i]) && i === start && i + 1 < end) {
+            return i - start;
+          }
+        }
+      }
+
+      // Special case: if fractionDenominatorMap exists, try to find an 'and' word that
+      // precedes a valid fraction denominator in the remaining tokens
+      if (config.fractionDenominatorMap && config.fractionDenominatorMap.size > 0) {
+        for (let i = start; i < end; i++) {
+          if (config.texts.point.includes(tokens[i])) {
+            // Check if the tokens after this position form a valid fraction decimal
+            const afterTokens = tokens.slice(i + 1, end);
+            if (afterTokens.length > 0) {
+              const maxKeyLen = Math.min(3, afterTokens.length);
+              for (let keyLen = maxKeyLen; keyLen >= 1; keyLen--) {
+                const denominatorKey = afterTokens.slice(afterTokens.length - keyLen).join(' ');
+                if (config.fractionDenominatorMap.has(denominatorKey)) {
+                  return i - start; // Found valid decimal point
+                }
+              }
+            }
+          }
+        }
+      }
       return -1;
     }
 

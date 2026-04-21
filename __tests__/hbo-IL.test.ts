@@ -315,7 +315,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -331,7 +333,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -373,5 +377,33 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('אחת');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['תשעה עשר', 19],
+  ['שמנה עשר', 18],
+  ['שבעה עשר', 17],
+  ['ששה עשר', 16],
+  ['חמשה עשר', 15],
+  ['ארבעה עשר', 14],
+  ['שלשה עשר', 13],
+  ['שנים עשר', 12],
+  ['אחד עשר', 11],
+  ['עשרה', 10],
+  ['תשעה', 9],
+  ['שבעה', 7],
+  ['ששה', 6],
+  ['חמשה', 5],
+  ['ארבעה', 4],
+  ['שלשה', 3],
+  ['שנים', 2],
+  ['אחד', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

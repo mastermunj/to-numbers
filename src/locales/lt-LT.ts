@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -61,8 +61,8 @@ export default class Locale implements LocaleInterface {
       { number: 5, value: 'Penki' },
       { number: 4, value: 'Keturi' },
       { number: 3, value: 'Trys' },
-      { number: 2, value: 'Du' },
-      { number: 1, value: 'Vienas' },
+      { number: 2, value: 'Du', feminineValue: 'Dvi' },
+      { number: 1, value: 'Vienas', feminineValue: 'Viena' },
       { number: 0, value: 'Nulis' },
     ],
     exactWordsMapping: [{ number: 100, value: 'Šimtas' }],
@@ -170,4 +170,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

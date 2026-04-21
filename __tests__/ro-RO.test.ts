@@ -312,7 +312,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -328,7 +330,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -375,5 +379,35 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Unu');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Zero Virgulă Unu Zecime', 0.1],
+  ['Zero Virgulă Trei Zecimi', 0.3],
+  ['Zero Virgulă Unu Sutime', 0.01],
+  ['Zero Virgulă Trei Sutimi', 0.03],
+  ['Zero Virgulă Unu Miime', 0.001],
+  ['Zero Virgulă Trei Miimi', 0.003],
+  ['Zero Virgulă Unu Zecime de Miime', 0.0001],
+  ['Zero Virgulă Trei Zecimi de Miime', 0.0003],
+  ['Zero Virgulă Unu Sutime de Miime', 0.00001],
+  ['Zero Virgulă Trei Sutimi de Miime', 0.00003],
+  ['Zero Virgulă Unu Milionime', 0.000001],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [['Una', 1]];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

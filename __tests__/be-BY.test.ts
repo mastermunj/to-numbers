@@ -353,7 +353,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -369,7 +371,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -410,5 +414,39 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Адзін');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Нуль Цэлых Адзін Дзясятая', 0.1],
+  ['Нуль Цэлых Тры Дзясятых', 0.3],
+  ['Нуль Цэлых Адзін Сотая', 0.01],
+  ['Нуль Цэлых Тры Сотых', 0.03],
+  ['Нуль Цэлых Адзін Тысачная', 0.001],
+  ['Нуль Цэлых Тры Тысачных', 0.003],
+  ['Нуль Цэлых Адзін Дзесяцітысачная', 0.0001],
+  ['Нуль Цэлых Тры Дзесяцітысачных', 0.0003],
+  ['Нуль Цэлых Адзін Статысачная', 0.00001],
+  ['Нуль Цэлых Тры Статысачных', 0.00003],
+  ['Нуль Цэлых Адзін Мільённая', 0.000001],
+  ['Нуль Цэлых Тры Мільённых', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['Дзве', 2],
+  ['Адна', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

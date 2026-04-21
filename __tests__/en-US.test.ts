@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { cloneDeep } from 'lodash';
 import { ToNumbers } from '../src/ToNumbers';
-import enUs, { ToNumbers as LocaleToNumbers } from '../src/locales/en-US';
+import enUs, { ToNumbers as LocaleToNumbers, toNumbers as localeToNumbers } from '../src/locales/en-US';
 
 const localeCode = 'en-US';
 const toNumbers = new ToNumbers({
@@ -16,6 +16,10 @@ describe('Test Locale', () => {
   test(`Per-locale ToNumbers class: ${localeCode}`, () => {
     const localeTn = new LocaleToNumbers();
     expect(localeTn.convert('0')).toBeDefined();
+  });
+
+  test(`Per-locale toNumbers helper: ${localeCode}`, () => {
+    expect(localeToNumbers('One Hundred Twenty Three')).toBe(123);
   });
 
   const wrongLocaleCode = localeCode + '-wrong';
@@ -311,7 +315,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -327,7 +333,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -393,5 +401,28 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Twenty One');
     expect(result.value).toBe(21);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Forty Five Hundredths', 0.45],
+  ['Zero Point One Tenth', 0.1],
+  ['Zero Point Three Tenths', 0.3],
+  ['Zero Point One Hundredth', 0.01],
+  ['Zero Point Three Hundredths', 0.03],
+  ['Zero Point One Thousandth', 0.001],
+  ['Zero Point Three Thousandths', 0.003],
+  ['Zero Point One Ten-Thousandth', 0.0001],
+  ['Zero Point Three Ten-Thousandths', 0.0003],
+  ['Zero Point One Hundred-Thousandth', 0.00001],
+  ['Zero Point Three Hundred-Thousandths', 0.00003],
+  ['Zero Point One Millionth', 0.000001],
+  ['Zero Point Three Millionths', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

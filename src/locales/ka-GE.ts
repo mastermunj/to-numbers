@@ -1,4 +1,4 @@
-import { LocaleConfig, LocaleInterface, ToNumbersOptions } from '../types.js';
+import { type ConverterOptions, type LocaleConfig, type LocaleInterface, type ToNumbersOptions } from '../types.js';
 import { ToNumbersCore } from '../ToNumbersCore.js';
 
 export default class Locale implements LocaleInterface {
@@ -113,6 +113,14 @@ export default class Locale implements LocaleInterface {
       { number: 300, value: 'მესამასე' },
       { number: 200, value: 'მეორასე' },
     ],
+    fractionDenominatorMapping: {
+      1: { singular: 'მეათედი', plural: 'მეათედი' },
+      2: { singular: 'მეასედი', plural: 'მეასედი' },
+      3: { singular: 'მეათასედი', plural: 'მეათასედი' },
+      4: { singular: 'მეათი-ათასედი', plural: 'მეათი-ათასედი' },
+      5: { singular: 'მეასი-ათასედი', plural: 'მეასი-ათასედი' },
+      6: { singular: 'მემილიონედი', plural: 'მემილიონედი' },
+    },
   };
 }
 
@@ -130,4 +138,10 @@ export class ToNumbers extends ToNumbersCore {
     super(options);
     this.setLocale(Locale);
   }
+}
+
+const instance = new ToNumbers();
+
+export function toNumbers(words: string, options?: ConverterOptions): number {
+  return instance.convert(words, options);
 }

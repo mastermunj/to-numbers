@@ -311,7 +311,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -327,7 +329,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -373,5 +377,27 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Een');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Nul Punt Een Tiende', 0.1],
+  ['Nul Punt Drie Tienden', 0.3],
+  ['Nul Punt Een Honderdste', 0.01],
+  ['Nul Punt Drie Honderdsten', 0.03],
+  ['Nul Punt Een Duizendste', 0.001],
+  ['Nul Punt Drie Duizendsten', 0.003],
+  ['Nul Punt Een Tienduizendste', 0.0001],
+  ['Nul Punt Drie Tienduizendsten', 0.0003],
+  ['Nul Punt Een Honderdduizendste', 0.00001],
+  ['Nul Punt Drie Honderdduizendsten', 0.00003],
+  ['Nul Punt Een Miljoenste', 0.000001],
+  ['Nul Punt Drie Miljoensten', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
   });
 });

@@ -312,7 +312,9 @@ describe('Test Negative Floats', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`;
     row[1] = -row[1];
   });
@@ -328,7 +330,9 @@ describe('Test Negative Floats - Lowercase', () => {
 
   const testNegativeFloats: [string, number][] = cloneDeep(testFloats);
   testNegativeFloats.forEach((row, i) => {
-    if (i === 0 || row[1] === 0) return;
+    if (i === 0 || row[1] === 0) {
+      return;
+    }
     row[0] = `${minusWord} ${row[0]}`.toLowerCase();
     row[1] = -row[1];
   });
@@ -375,5 +379,47 @@ describe('Test Ordinal Parse Result', () => {
     const result = toNumbers.parse('Uno');
     expect(result.value).toBe(1);
     expect(result.isOrdinal).toBeUndefined();
+  });
+});
+
+// Fraction denominator decimal tests (Phase 3)
+const testFractionDecimals: [string, number][] = [
+  ['Cero Punto Uno Décimo', 0.1],
+  ['Cero Punto Tres Décimos', 0.3],
+  ['Cero Punto Uno Centésimo', 0.01],
+  ['Cero Punto Tres Centésimos', 0.03],
+  ['Cero Punto Uno Milésimo', 0.001],
+  ['Cero Punto Tres Milésimos', 0.003],
+  ['Cero Punto Uno Diezmilésimo', 0.0001],
+  ['Cero Punto Tres Diezmilésimos', 0.0003],
+  ['Cero Punto Uno Cienmilésimo', 0.00001],
+  ['Cero Punto Tres Cienmilésimos', 0.00003],
+  ['Cero Punto Uno Millonésimo', 0.000001],
+  ['Cero Punto Tres Millonésimos', 0.000003],
+];
+
+describe('Test Fraction Denominator Decimals', () => {
+  test.concurrent.each(testFractionDecimals)('fraction decimal "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBeCloseTo(expected, 10);
+  });
+});
+
+// Gendered number form tests (Phase 3)
+const testGenderedForms: [string, number][] = [
+  ['Novecientas', 900],
+  ['Ochocientas', 800],
+  ['Setecientas', 700],
+  ['Seiscientas', 600],
+  ['Quinientas', 500],
+  ['Cuatrocientas', 400],
+  ['Trescientas', 300],
+  ['Doscientas', 200],
+  ['Veintiuna', 21],
+  ['Una', 1],
+];
+
+describe('Test Gendered Number Forms', () => {
+  test.concurrent.each(testGenderedForms)('gendered form "%s" => %d', (input, expected) => {
+    expect(toNumbers.convert(input)).toBe(expected);
   });
 });

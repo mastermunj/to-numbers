@@ -97,6 +97,21 @@ const testData = {
   },
 };
 
+const advancedCases = {
+  fractionDecimal: {
+    instance: instances['en-US'],
+    input: 'Forty Five Hundredths',
+  },
+  genderedForm: {
+    instance: instances['es-ES'],
+    input: 'Veintiuna',
+  },
+  formalCharacters: {
+    instance: new ToNumbers({ localeCode: 'zh-CN' }),
+    input: '玖拾',
+  },
+};
+
 describe('ToNumbers Performance Benchmarks', () => {
   describe('Small Integer (42)', () => {
     for (const [locale, instance] of Object.entries(instances)) {
@@ -158,5 +173,19 @@ describe('ToNumbers Performance Benchmarks', () => {
         instance.parse(data.mediumInt);
       });
     }
+  });
+
+  describe('Advanced Parsing Paths', () => {
+    bench('en-US fraction-style decimals', () => {
+      advancedCases.fractionDecimal.instance.convert(advancedCases.fractionDecimal.input);
+    });
+
+    bench('es-ES gendered forms', () => {
+      advancedCases.genderedForm.instance.convert(advancedCases.genderedForm.input);
+    });
+
+    bench('zh-CN formal characters', () => {
+      advancedCases.formalCharacters.instance.convert(advancedCases.formalCharacters.input);
+    });
   });
 });
