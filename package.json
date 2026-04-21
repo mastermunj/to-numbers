@@ -114,7 +114,7 @@
     "lodash": "^4.17.23",
     "oxfmt": "^0.44.0",
     "oxlint": "^1.57.0",
-    "oxlint-tsgolint": "^0.20.0",
+    "oxlint-tsgolint": "^0.21.1",
     "rimraf": "^6.1.2",
     "source-map-support": "^0.5.21",
     "typescript": "^5.9.3",
